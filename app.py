@@ -327,32 +327,57 @@ with tabs[2]:
     with data_source_tabs[1]:
         st.write("Use the included sample data for demonstration:")
         if st.button("Load Sample Data"):
-            # Try to copy from a known location if it exists
-            sample_paths = [
-                "data/datasets/CokePepsi.csv",
-                "data/data/datasets/CokePepsi.csv",
-                "data/CokePepsi.csv"
-            ]
+            # Use the verified path we found
+            sample_path = "data/datasets/CokePepsi.csv"
             
-            for sample_path in sample_paths:
-                if os.path.exists(sample_path):
-                    try:
-                        # Create directory if it doesn't exist
-                        os.makedirs(os.path.dirname(data_path), exist_ok=True)
-                        st.write("Creating directory: " + os.path.dirname(data_path))
-                        
-                        # Copy the file
-                        import shutil
-                        shutil.copy(sample_path, data_path)
-                        st.write("File copied from: " + sample_path + " to: " + data_path)
+            if os.path.exists(sample_path):
+                try:
+                    st.write("Debug: Found sample data at: " + sample_path)
+                    
+                    # Create directory if it doesn't exist
+                    target_dir = os.path.dirname(data_path)
+                    os.makedirs(target_dir, exist_ok=True)
+                    st.write("Debug: Created directory: " + target_dir)
+                    
+                    # Copy the file
+                    import shutil
+                    shutil.copy(sample_path, data_path)
+                    st.write("Debug: File copied from: " + sample_path + " to: " + data_path)
+                    
+                    # Verify the file was copied
+                    if os.path.exists(data_path):
+                        st.write("Debug: Verified file exists at: " + data_path + " with size: " + str(os.path.getsize(data_path)) + " bytes")
                         data_found = True
                         st.success("Sample data loaded successfully!")
-                        break
-                    except Exception as e:
-                        st.error("Error loading sample data: " + str(e))
-            
-            if not data_found:
-                st.error("Could not find sample data files. Please use the upload option instead.")
+                    else:
+                        st.error("File copy failed. The destination file does not exist.")
+                except Exception as e:
+                    st.error("Error loading sample data: " + str(e))
+                    import traceback
+                    st.code(traceback.format_exc(), language="python")
+            else:
+                st.error("Sample data file not found at: " + sample_path)
+                
+                # Try alternate locations as backup
+                backup_paths = [
+                    "data/data/datasets/CokePepsi.csv",
+                    "data/CokePepsi.csv"
+                ]
+                
+                for backup_path in backup_paths:
+                    if os.path.exists(backup_path):
+                        st.write("Found backup sample data at: " + backup_path)
+                        try:
+                            import shutil
+                            shutil.copy(backup_path, data_path)
+                            data_found = True
+                            st.success("Sample data loaded from backup location!")
+                            break
+                        except Exception as e:
+                            st.error("Error loading from backup: " + str(e))
+                
+                if not data_found:
+                    st.error("Could not find any sample data files. Please use the upload option instead.")
     
     with data_source_tabs[2]:
         st.write("Specify the path to an existing CokePepsi.csv file:")
@@ -388,14 +413,44 @@ with tabs[2]:
         # Load and display data
         try:
             st.write("Debug: Loading data from " + data_path)
-            df = pd.read_csv(data_path)
-            st.write("Debug: Data loaded successfully with shape " + str(df.shape))
+            
+            # Check if the file exists
+            if not os.path.exists(data_path):
+                st.error("File does not exist at path: " + data_path)
+                st.error("Current directory: " + os.getcwd())
+                df = pd.DataFrame()  # Empty dataframe to avoid errors
+            else:
+                st.write("Debug: File exists with size: " + str(os.path.getsize(data_path)) + " bytes")
+                # Try to read the file contents
+                try:
+                    with open(data_path, 'r') as f:
+                        file_preview = f.read(500)  # Read first 500 chars
+                        st.write("Debug: File preview:\n" + file_preview)
+                except Exception as read_error:
+                    st.error("Error reading file contents: " + str(read_error))
+                
+                # Now try to parse as CSV
+                df = pd.read_csv(data_path)
+                st.write("Debug: Data loaded successfully with shape " + str(df.shape))
             
             # Convert data to numeric to ensure we have numbers, not strings
-            st.write("Debug: Converting data to numeric")
-            for col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-            st.write("Debug: Data columns converted to numeric types")
+            # Only convert data if we have a non-empty dataframe
+            if df.empty:
+                st.error("DataFrame is empty. Skipping data conversion.")
+            else:
+                # Convert data to numeric to ensure we have numbers, not strings
+                st.write("Debug: Converting data to numeric")
+                for col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                st.write("Debug: Data columns converted to numeric types")
+                
+                # Check if all data became NaN after conversion
+                if df.isnull().all().all():
+                    st.error("All data converted to NaN. Check that the CSV contains numeric data.")
+                    # Show the original data for debugging
+                    st.write("Original data before conversion:")
+                    original_df = pd.read_csv(data_path)
+                    st.write(original_df.head())
             
             # Add row numbers as an index approximating time
             df_with_index = df.copy()
@@ -407,7 +462,19 @@ with tabs[2]:
             
             with data_tabs[0]:
                 st.subheader("CokePepsi.csv Data Preview")
-                st.dataframe(df.head(10))
+                
+                # Check if dataframe is empty
+                if df.empty:
+                    st.error("DataFrame is empty! No data to display.")
+                else:
+                    st.write("Debug: Displaying dataframe with shape: " + str(df.shape))
+                    st.write("Debug: DataFrame columns: " + str(list(df.columns)))
+                    st.write("Debug: First 5 rows (raw display):")
+                    st.write(df.head(5))  # Use st.write for raw display
+                    
+                    # Also try standard dataframe display
+                    st.write("Standard dataframe display:")
+                    st.dataframe(df.head(10))
                 
                 # Print data statistics
                 st.subheader("Data Statistics")
