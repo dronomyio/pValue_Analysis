@@ -92,15 +92,15 @@ with tabs[0]:
                                   help="Display the theoretical probability density function")
         
         # Format statistics individually for safer string formatting
-        prob_05 = "{:.2f}".format(stats.probability_below_threshold(pM, 0.05))
-        prob_01 = "{:.2f}".format(stats.probability_below_threshold(pM, 0.01))
+        prob_05 = str(round(stats.probability_below_threshold(pM, 0.05), 2))
+        prob_01 = str(round(stats.probability_below_threshold(pM, 0.01), 2))
         
         st.markdown("""
         ### Key Statistics
         
-        - **Probability p < 0.05**: {}
-        - **Probability p < 0.01**: {}
-        """.format(prob_05, prob_01))
+        - **Probability p < 0.05**: """ + prob_05 + """
+        - **Probability p < 0.01**: """ + prob_01 + """
+        """)
     
     with col2:
         # Generate data
@@ -183,17 +183,19 @@ with tabs[1]:
         # Create a small table of expected minimum p-values
         data = {"Trials": trials_list, "Expected Min P-Value": [expected_mins[m] for m in trials_list]}
         df = pd.DataFrame(data)
-        df["Significant at α={}?".format(significance)] = df["Expected Min P-Value"] < significance
+        significant_col = "Significant at α=" + str(significance) + "?"
+        df[significant_col] = df["Expected Min P-Value"] < significance
         
         # Highlight the first row where the expected min p-value becomes significant
-        first_sig = df[df["Significant at α={}?".format(significance)]]["Trials"].min() if any(df["Significant at α={}?".format(significance)]) else None
+        first_sig = df[df[significant_col]]["Trials"].min() if any(df[significant_col]) else None
         
         if first_sig:
-            st.markdown("**Finding**: With just **{} trials**, the expected minimum p-value becomes significant at α={}".format(first_sig, significance))
+            st.markdown("**Finding**: With just **" + str(first_sig) + " trials**, the expected minimum p-value becomes significant at α=" + str(significance))
         else:
-            st.markdown("**Finding**: Even with {} trials, the expected minimum p-value does not become significant at α={}".format(max_trials, significance))
+            st.markdown("**Finding**: Even with " + str(max_trials) + " trials, the expected minimum p-value does not become significant at α=" + str(significance))
         
-        st.dataframe(df.style.format({"Expected Min P-Value": "{:.4f}"}))
+        # Use a simpler formatting approach without format specifiers
+        st.dataframe(df)
     
     with col2:
         # Generate data for visualization
@@ -293,7 +295,8 @@ with tabs[2]:
                         st.error("Error writing file: {}".format(str(file_error)))
                     
                     data_found = True
-                    st.success("File uploaded and validated successfully! Size: {:.1f} KB".format(len(bytes_data)/1024))
+                    file_size_kb = round(len(bytes_data)/1024, 1)
+                    st.success("File uploaded and validated successfully! Size: " + str(file_size_kb) + " KB")
                 else:
                     st.error("The CSV file needs at least 2 columns for KO and PEP prices.")
             except Exception as e:
@@ -360,9 +363,9 @@ with tabs[2]:
     else:
         # Load and display data
         try:
-            st.write("Debug: Loading data from {}".format(data_path))
+            st.write("Debug: Loading data from " + data_path)
             df = pd.read_csv(data_path)
-            st.write("Debug: Data loaded successfully with shape {}".format(df.shape))
+            st.write("Debug: Data loaded successfully with shape " + str(df.shape))
             
             # Add row numbers as an index approximating time
             df_with_index = df.copy()
@@ -378,14 +381,19 @@ with tabs[2]:
                 
                 # Print data statistics
                 st.subheader("Data Statistics")
-                st.write("**Rows:** {} trading days".format(len(df)))
-                st.write("**Columns:** {}".format(', '.join(df.columns)))
-                st.write("**KO Price Range:** $" + "{:.2f}".format(df.iloc[:, 0].min()) + " to $" + "{:.2f}".format(df.iloc[:, 0].max()))
-                st.write("**PEP Price Range:** $" + "{:.2f}".format(df.iloc[:, 1].min()) + " to $" + "{:.2f}".format(df.iloc[:, 1].max()))
+                st.write("**Rows:** " + str(len(df)) + " trading days")
+                st.write("**Columns:** " + ', '.join(df.columns))
+                min_ko = round(df.iloc[:, 0].min(), 2)
+                max_ko = round(df.iloc[:, 0].max(), 2)
+                st.write("**KO Price Range:** $" + str(min_ko) + " to $" + str(max_ko))
+                min_pep = round(df.iloc[:, 1].min(), 2)
+                max_pep = round(df.iloc[:, 1].max(), 2)
+                st.write("**PEP Price Range:** $" + str(min_pep) + " to $" + str(max_pep))
                 
                 # Calculate correlation
                 correlation = df.iloc[:, 0].corr(df.iloc[:, 1])
-                st.write("**Correlation:** " + "{:.3f}".format(correlation))
+                corr_rounded = round(correlation, 3)
+                st.write("**Correlation:** " + str(corr_rounded))
             
             with data_tabs[1]:
                 try:
