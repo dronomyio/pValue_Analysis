@@ -19,8 +19,20 @@ class CokePepsiTradingStrategy:
         Args:
             data_path (str): Path to the CSV file containing Coke/Pepsi data
         """
-        self.data = pd.read_csv(data_path)
-        self.data.columns = ['KO', 'PEP']  # Rename columns for clarity
+        # Load the data and handle potential file not found
+        try:
+            self.data = pd.read_csv(data_path)
+            
+            # Check if file exists and has the right columns
+            if self.data.shape[1] == 2:
+                # Rename columns for consistency regardless of original names
+                self.data.columns = ['KO', 'PEP']
+            else:
+                # For files with unexpected structure, raise an error
+                raise ValueError("CSV file should have exactly 2 columns, found {}".format(self.data.shape[1]))
+                
+        except FileNotFoundError:
+            raise FileNotFoundError("Data file not found: {}. Make sure the path is correct.".format(data_path))
         
         # Calculate log returns
         self.returns = self.data.pct_change().dropna()
@@ -198,7 +210,7 @@ class CokePepsiTradingStrategy:
         annual_vol = results['strategy_return'].std() * np.sqrt(252)
         sharpe_ratio = annual_return / annual_vol if annual_vol > 0 else 0
         
-        strategy_id = f"w{window_size}_e{entry_threshold}_x{exit_threshold}_p{p_value_threshold}"
+        strategy_id = "w{}_e{}_x{}_p{}".format(window_size, entry_threshold, exit_threshold, p_value_threshold)
         self.strategy_results[strategy_id] = {
             'results': results,
             'sharpe_ratio': sharpe_ratio,
@@ -228,7 +240,7 @@ class CokePepsiTradingStrategy:
             strategy_id = list(self.strategy_results.keys())[-1]
         
         if strategy_id not in self.strategy_results:
-            raise ValueError(f"Strategy ID {strategy_id} not found in results")
+            raise ValueError("Strategy ID {} not found in results".format(strategy_id))
         
         results = self.strategy_results[strategy_id]['results']
         params = self.strategy_results[strategy_id]['params']
@@ -240,7 +252,7 @@ class CokePepsiTradingStrategy:
         ax1.plot(results['cum_strategy'], label='Strategy', color='green')
         ax1.plot(results['cum_KO'], label='KO', color='blue', alpha=0.5)
         ax1.plot(results['cum_PEP'], label='PEP', color='red', alpha=0.5)
-        ax1.set_title(f'Cumulative Returns - Sharpe: {sharpe:.2f}')
+        ax1.set_title('Cumulative Returns - Sharpe: {:.2f}'.format(sharpe))
         ax1.legend()
         ax1.grid(True, alpha=0.3)
         
@@ -367,8 +379,8 @@ class CokePepsiTradingStrategy:
         ax2.axhline(y=0.05, color='black', linestyle='--', label='Expected Type I Error Rate')
         
         # Add text annotations
-        ax2.text(0, sig_prop_train + 0.05, f"{sig_prop_train:.2%}", ha='center')
-        ax2.text(1, sig_prop_test + 0.05, f"{sig_prop_test:.2%}", ha='center')
+        ax2.text(0, sig_prop_train + 0.05, "{:.2%}".format(sig_prop_train), ha='center')
+        ax2.text(1, sig_prop_test + 0.05, "{:.2%}".format(sig_prop_test), ha='center')
         ax2.legend()
         ax2.grid(True, alpha=0.3)
         
@@ -405,7 +417,7 @@ class CokePepsiTradingStrategy:
                 params_copy['sharpe_ratio'] = sharpe_ratio
                 
                 # Get the strategy ID
-                strategy_id = f"w{params.get('window_size', 60)}_e{params.get('entry_threshold', 2.0)}_x{params.get('exit_threshold', 0.5)}_p{params.get('p_value_threshold', 0.05)}"
+                strategy_id = "w{}_e{}_x{}_p{}".format(params.get('window_size', 60), params.get('entry_threshold', 2.0), params.get('exit_threshold', 0.5), params.get('p_value_threshold', 0.05))
                 annual_return = self.strategy_results[strategy_id]['annual_return']
                 annual_vol = self.strategy_results[strategy_id]['annual_vol']
                 
@@ -414,7 +426,7 @@ class CokePepsiTradingStrategy:
                 
                 results.append(params_copy)
             except Exception as e:
-                print(f"Error with parameters {params}: {e}")
+                print("Error with parameters {}: {}".format(params, e))
         
         # Create DataFrame from results
         results_df = pd.DataFrame(results)
@@ -425,10 +437,10 @@ class CokePepsiTradingStrategy:
         # Calculate expected maximum Sharpe ratio by random chance
         max_sharpe = results_df['sharpe_ratio'].max()
         
-        print(f"Tested {len(results_df)} parameter combinations")
-        print(f"Proportion with Sharpe > 1: {success_rate:.2%}")
-        print(f"Maximum Sharpe ratio: {max_sharpe:.2f}")
-        print(f"Expected maximum Sharpe by p-hacking: Using {len(results_df)} trials, the expected minimum p-value would be approximately {1/(len(results_df)+1):.4f}")
+        print("Tested {} parameter combinations".format(len(results_df)))
+        print("Proportion with Sharpe > 1: {:.2%}".format(success_rate))
+        print("Maximum Sharpe ratio: {:.2f}".format(max_sharpe))
+        print("Expected maximum Sharpe by p-hacking: Using {} trials, the expected minimum p-value would be approximately {:.4f}".format(len(results_df), 1/(len(results_df)+1)))
         
         return results_df
     
@@ -447,7 +459,7 @@ class CokePepsiTradingStrategy:
         # Plot histogram of Sharpe ratios
         ax1.hist(results_df['sharpe_ratio'], bins=20, alpha=0.7, color='green')
         ax1.axvline(x=1, color='red', linestyle='--', label='Sharpe = 1')
-        ax1.axvline(x=results_df['sharpe_ratio'].max(), color='blue', linestyle='--', label=f'Max Sharpe = {results_df["sharpe_ratio"].max():.2f}')
+        ax1.axvline(x=results_df['sharpe_ratio'].max(), color='blue', linestyle='--', label='Max Sharpe = {:.2f}'.format(results_df["sharpe_ratio"].max()))
         ax1.set_title('Distribution of Sharpe Ratios Across Parameter Combinations')
         ax1.set_xlabel('Sharpe Ratio')
         ax1.set_ylabel('Count')
@@ -490,7 +502,7 @@ if __name__ == "__main__":
     
     # Run a backtest with default parameters
     results, sharpe = strategy.backtest_strategy()
-    print(f"Default strategy Sharpe ratio: {sharpe:.2f}")
+    print("Default strategy Sharpe ratio: {:.2f}".format(sharpe))
     
     # Plot strategy results
     strategy.plot_strategy_results()
