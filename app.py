@@ -315,13 +315,13 @@ with tabs[2]:
                 fig, ax = plt.subplots(figsize=(10, 6))
                 
                 # Plot with better formatting
-                ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=f"{df.columns[0]}", color='blue', linewidth=2)
-                ax.set_ylabel(f"{df.columns[0]} Price ($)", color='blue')
+                ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
+                ax.set_ylabel("{} Price ($)".format(df.columns[0]), color='blue')
                 
                 # Create a second y-axis for PEP
                 ax2 = ax.twinx()
-                ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=f"{df.columns[1]}", color='red', linewidth=2)
-                ax2.set_ylabel(f"{df.columns[1]} Price ($)", color='red')
+                ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
+                ax2.set_ylabel("{} Price ($)".format(df.columns[1]), color='red')
                 
                 # Add title and grid
                 ax.set_title("Coca-Cola vs PepsiCo Price Series")
@@ -352,8 +352,8 @@ with tabs[2]:
                 normalized = df / df.iloc[0] * 100
                 
                 fig, ax = plt.subplots(figsize=(10, 6))
-                ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=f"{df.columns[0]}", color='blue', linewidth=2)
-                ax.plot(df_with_index['Day'], normalized.iloc[:, 1], label=f"{df.columns[1]}", color='red', linewidth=2)
+                ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
+                ax.plot(df_with_index['Day'], normalized.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
                 
                 # Add title and labels
                 ax.set_title("Normalized Prices (First day = 100)")
@@ -403,7 +403,7 @@ with tabs[2]:
                 
                 # Plot the ratio
                 ax1.plot(df_spread['Day'], df_spread['Ratio'], label='KO/PEP Ratio')
-                ax1.plot(df_spread['Day'], df_spread['Ratio_MA'], label=f'{window}-day Moving Average', color='red')
+                ax1.plot(df_spread['Day'], df_spread['Ratio_MA'], label='{}-day Moving Average'.format(window), color='red')
                 ax1.set_title('Ratio of KO to PEP Prices')
                 ax1.set_ylabel('Price Ratio')
                 ax1.grid(True, alpha=0.3)
