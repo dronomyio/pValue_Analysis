@@ -457,13 +457,29 @@ with tabs[2]:
                     fig, ax = plt.subplots(figsize=(10, 6))
                     st.write("Debug: Created figure")
                     
+                    # Check data dimensions before plotting
+                    st.write("Debug: Checking data dimensions for plotting")
+                    if df_with_index.shape[1] < 2:
+                        st.error("Data must have at least 2 columns for Price Series visualization")
+                        st.write("Current data shape: " + str(df_with_index.shape))
+                        st.write("Available columns: " + str(list(df_with_index.columns)))
+                        return
+                        
+                    # Ensure column labels exist
+                    if len(df.columns) < 2:
+                        col1_label = "Column 1"
+                        col2_label = "Column 2"
+                    else:
+                        col1_label = str(df.columns[0])
+                        col2_label = str(df.columns[1])
+                    
                     # Plot with better formatting
-                    ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
+                    ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=col1_label, color='blue', linewidth=2)
                     ax.set_ylabel("Coca-Cola Price ($)", color='blue')  # Hardcoded label instead of using format
                     
                     # Create a second y-axis for PEP
                     ax2 = ax.twinx()
-                    ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
+                    ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=col2_label, color='red', linewidth=2)
                     ax2.set_ylabel("PepsiCo Price ($)", color='red')  # Hardcoded label instead of using format
                     
                     # Add title and grid
@@ -496,14 +512,55 @@ with tabs[2]:
                     st.subheader("Normalized Price Series")
                     st.write("Debug: Entering Normalized Price Series tab")
                     
-                    # Normalize to the first day
+                    # Check data dimensions before normalizing
                     st.write("Debug: About to normalize data")
-                    normalized = df / df.iloc[0] * 100
-                    st.write("Debug: Normalized data shape: " + str(normalized.shape))
+                    if df.shape[1] < 2 or df.shape[0] == 0:
+                        st.error("Data must have at least 2 columns and 1 row for Normalized Price visualization")
+                        st.write("Current data shape: " + str(df.shape))
+                        st.write("Available columns: " + str(list(df.columns)))
+                        return
                     
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
-                    ax.plot(df_with_index['Day'], normalized.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
+                    try:
+                        # Ensure first row has valid numeric data for division
+                        first_row = df.iloc[0]
+                        st.write("Debug: First row values: " + str(first_row.values))
+                        
+                        # Check for zeros or NaNs in first row
+                        if first_row.isnull().any() or (first_row == 0).any():
+                            st.warning("First row contains zeros or NaN values, using careful normalization")
+                            # Use a safer normalization approach
+                            normalized = df.copy()
+                            for col in df.columns:
+                                base_val = df[col].iloc[0]
+                                if base_val != 0 and not pd.isna(base_val):
+                                    normalized[col] = df[col] / base_val * 100
+                                else:
+                                    normalized[col] = 100  # Default to flat line
+                        else:
+                            # Normal normalization
+                            normalized = df / df.iloc[0] * 100
+                        
+                        st.write("Debug: Normalized data shape: " + str(normalized.shape))
+                        
+                        # Ensure column labels exist
+                        if len(df.columns) < 2:
+                            col1_label = "Column 1"
+                            col2_label = "Column 2"
+                        else:
+                            col1_label = str(df.columns[0])
+                            col2_label = str(df.columns[1])
+                        
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=col1_label, color='blue', linewidth=2)
+                        ax.plot(df_with_index['Day'], normalized.iloc[:, 1], label=col2_label, color='red', linewidth=2)
+                    except Exception as norm_error:
+                        st.error("Error normalizing data: " + str(norm_error))
+                        import traceback
+                        st.code(traceback.format_exc(), language="python")
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        ax.text(0.5, 0.5, "Error in data normalization", 
+                               horizontalalignment='center', verticalalignment='center',
+                               transform=ax.transAxes, fontsize=14)
                     
                     # Add title and labels
                     ax.set_title("Normalized Prices (First day = 100)")
@@ -536,17 +593,64 @@ with tabs[2]:
                     st.subheader("Spread Analysis")
                     st.write("Debug: Entering Spread Analysis tab")
                     
-                    # Calculate ratio
+                    # Check data dimensions before calculating spread
+                    st.write("Debug: Checking data dimensions for spread analysis")
+                    if df.shape[1] < 2 or df.shape[0] == 0:
+                        st.error("Data must have at least 2 columns and 1 row for Spread Analysis")
+                        st.write("Current data shape: " + str(df.shape))
+                        st.write("Available columns: " + str(list(df.columns)))
+                        return
+                    
+                    # Calculate ratio with error checking
                     df_spread = df.copy()
+                    
+                    # Check for zeros in the denominator
+                    if (df_spread.iloc[:, 1] == 0).any() or df_spread.iloc[:, 1].isnull().any():
+                        st.warning("Second column contains zeros or NaN values, replacing with small values for ratio calculation")
+                        # Replace zeros and NaNs with a small value to avoid division by zero
+                        df_spread.iloc[:, 1] = df_spread.iloc[:, 1].replace(0, 0.0001)
+                        df_spread.iloc[:, 1] = df_spread.iloc[:, 1].fillna(0.0001)
+                    
                     df_spread['Ratio'] = df_spread.iloc[:, 0] / df_spread.iloc[:, 1]
                     st.write("Debug: Calculated ratio")
                     
-                    # Calculate z-score with a 60-day window
-                    window = 60
-                    df_spread['Ratio_MA'] = df_spread['Ratio'].rolling(window=window).mean()
-                    df_spread['Ratio_SD'] = df_spread['Ratio'].rolling(window=window).std()
-                    df_spread['Z-Score'] = (df_spread['Ratio'] - df_spread['Ratio_MA']) / df_spread['Ratio_SD']
-                    st.write("Debug: Calculated z-score")
+                    # Calculate z-score with a window that adjusts to data length
+                    # Make sure window size is appropriate for data length
+                    if len(df_spread) < 60:
+                        window = max(5, len(df_spread) // 4)  # Use at least 5 days or 1/4 of data length
+                        st.warning(f"Data length ({len(df_spread)}) is less than default window (60). Using window size of {window} instead.")
+                    else:
+                        window = 60
+                        
+                    if len(df_spread) <= window:
+                        st.error(f"Data length ({len(df_spread)}) is too short for rolling window analysis with window size {window}.")
+                        # Create an empty plot with message
+                        fig, ax = plt.subplots(2, 1, figsize=(10, 10))
+                        ax[0].text(0.5, 0.5, "Not enough data for spread analysis", 
+                                  horizontalalignment='center', verticalalignment='center',
+                                  transform=ax[0].transAxes, fontsize=14)
+                        ax[1].text(0.5, 0.5, "Need more than " + str(window) + " data points", 
+                                  horizontalalignment='center', verticalalignment='center',
+                                  transform=ax[1].transAxes, fontsize=14)
+                        plt.tight_layout()
+                        st.pyplot(fig)
+                        return
+                    
+                    try:
+                        df_spread['Ratio_MA'] = df_spread['Ratio'].rolling(window=window).mean()
+                        df_spread['Ratio_SD'] = df_spread['Ratio'].rolling(window=window).std()
+                        
+                        # Handle division by zero in z-score calculation
+                        df_spread['Z-Score'] = 0  # Initialize with zeros
+                        mask = df_spread['Ratio_SD'] > 0  # Only calculate where SD > 0
+                        df_spread.loc[mask, 'Z-Score'] = (df_spread.loc[mask, 'Ratio'] - df_spread.loc[mask, 'Ratio_MA']) / df_spread.loc[mask, 'Ratio_SD']
+                        
+                        st.write("Debug: Calculated z-score")
+                    except Exception as z_error:
+                        st.error("Error calculating z-score: " + str(z_error))
+                        import traceback
+                        st.code(traceback.format_exc(), language="python")
+                        return
                     
                     # Drop NaN values from the beginning
                     df_spread = df_spread.dropna()
