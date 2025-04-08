@@ -9,9 +9,9 @@ fi
 # Activate virtual environment
 source venv/bin/activate
 
-# Install required packages (minimal set for better performance)
+# Install required packages
 echo "Installing required packages..."
-pip install streamlit numpy pandas matplotlib scipy
+pip install -r requirements.txt
 
 # Run the Streamlit app
 echo "Starting the Lightweight P-Value Analysis application..."
