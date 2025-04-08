@@ -92,8 +92,23 @@ with tabs[0]:
                                   help="Display the theoretical probability density function")
         
         # Format statistics individually for safer string formatting
-        prob_05 = str(round(stats.probability_below_threshold(pM, 0.05), 2))
-        prob_01 = str(round(stats.probability_below_threshold(pM, 0.01), 2))
+        try:
+            prob_05_val = stats.probability_below_threshold(pM, 0.05)
+            prob_01_val = stats.probability_below_threshold(pM, 0.01)
+            
+            if isinstance(prob_05_val, (int, float)):
+                prob_05 = str(round(prob_05_val, 2))
+            else:
+                prob_05 = str(prob_05_val)
+                
+            if isinstance(prob_01_val, (int, float)):
+                prob_01 = str(round(prob_01_val, 2))
+            else:
+                prob_01 = str(prob_01_val)
+        except Exception as e:
+            prob_05 = "Error calculating"
+            prob_01 = "Error calculating"
+            st.error("Error calculating probabilities: " + str(e))
         
         st.markdown("""
         ### Key Statistics
@@ -295,8 +310,15 @@ with tabs[2]:
                         st.error("Error writing file: {}".format(str(file_error)))
                     
                     data_found = True
-                    file_size_kb = round(len(bytes_data)/1024, 1)
-                    st.success("File uploaded and validated successfully! Size: " + str(file_size_kb) + " KB")
+                    try:
+                        file_size_bytes = len(bytes_data)
+                        if isinstance(file_size_bytes, (int, float)):
+                            file_size_kb = round(file_size_bytes/1024, 1)
+                        else:
+                            file_size_kb = file_size_bytes/1024
+                        st.success("File uploaded and validated successfully! Size: " + str(file_size_kb) + " KB")
+                    except Exception as e:
+                        st.success("File uploaded and validated successfully!")
                 else:
                     st.error("The CSV file needs at least 2 columns for KO and PEP prices.")
             except Exception as e:
@@ -367,6 +389,12 @@ with tabs[2]:
             df = pd.read_csv(data_path)
             st.write("Debug: Data loaded successfully with shape " + str(df.shape))
             
+            # Convert data to numeric to ensure we have numbers, not strings
+            st.write("Debug: Converting data to numeric")
+            for col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            st.write("Debug: Data columns converted to numeric types")
+            
             # Add row numbers as an index approximating time
             df_with_index = df.copy()
             df_with_index['Day'] = range(len(df_with_index))
@@ -383,17 +411,40 @@ with tabs[2]:
                 st.subheader("Data Statistics")
                 st.write("**Rows:** " + str(len(df)) + " trading days")
                 st.write("**Columns:** " + ', '.join(df.columns))
-                min_ko = round(df.iloc[:, 0].min(), 2)
-                max_ko = round(df.iloc[:, 0].max(), 2)
-                st.write("**KO Price Range:** $" + str(min_ko) + " to $" + str(max_ko))
-                min_pep = round(df.iloc[:, 1].min(), 2)
-                max_pep = round(df.iloc[:, 1].max(), 2)
-                st.write("**PEP Price Range:** $" + str(min_pep) + " to $" + str(max_pep))
+                try:
+                    # Ensure values are numeric before rounding
+                    min_ko_val = df.iloc[:, 0].min()
+                    max_ko_val = df.iloc[:, 0].max()
+                    if isinstance(min_ko_val, (int, float)) and isinstance(max_ko_val, (int, float)):
+                        min_ko = round(min_ko_val, 2)
+                        max_ko = round(max_ko_val, 2)
+                    else:
+                        min_ko = min_ko_val
+                        max_ko = max_ko_val
+                    st.write("**KO Price Range:** $" + str(min_ko) + " to $" + str(max_ko))
+                    
+                    min_pep_val = df.iloc[:, 1].min()
+                    max_pep_val = df.iloc[:, 1].max()
+                    if isinstance(min_pep_val, (int, float)) and isinstance(max_pep_val, (int, float)):
+                        min_pep = round(min_pep_val, 2)
+                        max_pep = round(max_pep_val, 2)
+                    else:
+                        min_pep = min_pep_val
+                        max_pep = max_pep_val
+                    st.write("**PEP Price Range:** $" + str(min_pep) + " to $" + str(max_pep))
+                except Exception as e:
+                    st.write("Error calculating price range: " + str(e))
                 
                 # Calculate correlation
-                correlation = df.iloc[:, 0].corr(df.iloc[:, 1])
-                corr_rounded = round(correlation, 3)
-                st.write("**Correlation:** " + str(corr_rounded))
+                try:
+                    correlation = df.iloc[:, 0].corr(df.iloc[:, 1])
+                    if isinstance(correlation, (int, float)):
+                        corr_rounded = round(correlation, 3)
+                    else:
+                        corr_rounded = correlation
+                    st.write("**Correlation:** " + str(corr_rounded))
+                except Exception as e:
+                    st.write("Error calculating correlation: " + str(e))
             
             with data_tabs[1]:
                 try:
