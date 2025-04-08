@@ -111,7 +111,7 @@ with tabs[0]:
         
         # Plot histogram
         ax.hist(p_values, bins=30, density=True, alpha=0.7, color='skyblue', 
-                label=f'Simulated p-values (n={n_samples})')
+                label='Simulated p-values (n={})'.format(n_samples))
         
         # Plot theoretical density if requested
         if show_density:
@@ -123,12 +123,12 @@ with tabs[0]:
         ax.axvline(x=0.05, color='green', linestyle='--', alpha=0.7, label='p=0.05')
         
         # Add vertical line at p=pM
-        ax.axvline(x=pM, color='purple', linestyle='-', alpha=0.7, label=f'True median p={pM}')
+        ax.axvline(x=pM, color='purple', linestyle='-', alpha=0.7, label='True median p={}'.format(pM))
         
         # Set labels and title
         ax.set_xlabel('p-value')
         ax.set_ylabel('Density')
-        ax.set_title(f'Meta-Distribution of P-Values (True Median p={pM})')
+        ax.set_title('Meta-Distribution of P-Values (True Median p={})'.format(pM))
         ax.legend()
         
         # Set x-axis to log scale for better visualization of small p-values
@@ -209,7 +209,7 @@ with tabs[1]:
         
         # Add horizontal line at significance level
         ax.axhline(y=significance, color='red', linestyle='--', alpha=0.7, 
-                   label=f'Significance level (α={significance})')
+                   label='Significance level (α={})'.format(significance))
         
         # Add line for expected minimum p-values
         ax.plot(range(1, max_trials + 1), [expected_mins[m] for m in range(1, max_trials + 1)], 
