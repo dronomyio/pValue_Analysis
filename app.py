@@ -91,12 +91,16 @@ with tabs[0]:
         show_density = st.checkbox("Show Theoretical Density", value=True,
                                   help="Display the theoretical probability density function")
         
-        st.markdown(f"""
+        # Format statistics individually for safer string formatting
+        prob_05 = "{:.2f}".format(stats.probability_below_threshold(pM, 0.05))
+        prob_01 = "{:.2f}".format(stats.probability_below_threshold(pM, 0.01))
+        
+        st.markdown("""
         ### Key Statistics
         
-        - **Probability p < 0.05**: {stats.probability_below_threshold(pM, 0.05):.2f}
-        - **Probability p < 0.01**: {stats.probability_below_threshold(pM, 0.01):.2f}
-        """)
+        - **Probability p < 0.05**: {}
+        - **Probability p < 0.01**: {}
+        """.format(prob_05, prob_01))
     
     with col2:
         # Generate data
@@ -264,7 +268,7 @@ with tabs[2]:
     if uploaded_file is not None:
         # Save the uploaded file
         bytes_data = uploaded_file.getvalue()
-        st.success(f"File uploaded successfully! Size: {len(bytes_data)/1024:.1f} KB")
+        st.success("File uploaded successfully! Size: {:.1f} KB".format(len(bytes_data)/1024))
         
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(data_path), exist_ok=True)
@@ -299,14 +303,14 @@ with tabs[2]:
                 
                 # Print data statistics
                 st.subheader("Data Statistics")
-                st.write(f"**Rows:** {len(df)} trading days")
-                st.write(f"**Columns:** {', '.join(df.columns)}")
-                st.write(f"**KO Price Range:** ${df.iloc[:, 0].min():.2f} to ${df.iloc[:, 0].max():.2f}")
-                st.write(f"**PEP Price Range:** ${df.iloc[:, 1].min():.2f} to ${df.iloc[:, 1].max():.2f}")
+                st.write("**Rows:** {} trading days".format(len(df)))
+                st.write("**Columns:** {}".format(', '.join(df.columns)))
+                st.write("**KO Price Range:** ${:.2f} to ${:.2f}".format(df.iloc[:, 0].min(), df.iloc[:, 0].max()))
+                st.write("**PEP Price Range:** ${:.2f} to ${:.2f}".format(df.iloc[:, 1].min(), df.iloc[:, 1].max()))
                 
                 # Calculate correlation
                 correlation = df.iloc[:, 0].corr(df.iloc[:, 1])
-                st.write(f"**Correlation:** {correlation:.3f}")
+                st.write("**Correlation:** {:.3f}".format(correlation))
             
             with data_tabs[1]:
                 # Plot the data with better formatting
