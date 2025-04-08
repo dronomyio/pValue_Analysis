@@ -388,35 +388,39 @@ with tabs[2]:
                 st.write("**Correlation:** " + "{:.3f}".format(correlation))
             
             with data_tabs[1]:
-                # Plot the data with better formatting
-                st.subheader("Price Series")
-                st.write("Debug: Entering Price Series tab")
-                
-                fig, ax = plt.subplots(figsize=(10, 6))
-                st.write("Debug: Created figure")
-                
-                # Plot with better formatting
-                ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
-                ax.set_ylabel("Coca-Cola Price ($)", color='blue')  # Hardcoded label instead of using format
-                
-                # Create a second y-axis for PEP
-                ax2 = ax.twinx()
-                ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
-                ax2.set_ylabel("PepsiCo Price ($)", color='red')  # Hardcoded label instead of using format
-                
-                # Add title and grid
-                ax.set_title("Coca-Cola vs PepsiCo Price Series")
-                ax.grid(True, alpha=0.3)
-                
-                # Add legend
-                lines1, labels1 = ax.get_legend_handles_labels()
-                lines2, labels2 = ax2.get_legend_handles_labels()
-                ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-                
-                # Add x-axis label
-                ax.set_xlabel("Trading Day")
-                
-                st.pyplot(fig)
+                try:
+                    # Plot the data with better formatting
+                    st.subheader("Price Series")
+                    st.write("Debug: Entering Price Series tab")
+                    
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    st.write("Debug: Created figure")
+                    
+                    # Plot with better formatting
+                    ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
+                    ax.set_ylabel("Coca-Cola Price ($)", color='blue')  # Hardcoded label instead of using format
+                    
+                    # Create a second y-axis for PEP
+                    ax2 = ax.twinx()
+                    ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
+                    ax2.set_ylabel("PepsiCo Price ($)", color='red')  # Hardcoded label instead of using format
+                    
+                    # Add title and grid
+                    ax.set_title("Coca-Cola vs PepsiCo Price Series")
+                    ax.grid(True, alpha=0.3)
+                    
+                    # Add legend
+                    lines1, labels1 = ax.get_legend_handles_labels()
+                    lines2, labels2 = ax2.get_legend_handles_labels()
+                    ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+                    
+                    # Add x-axis label
+                    ax.set_xlabel("Trading Day")
+                    
+                    st.pyplot(fig)
+                    
+                except Exception as e:
+                    st.error("Error in Price Series tab: " + str(e))
                 
                 st.markdown("""
                 **Observations:**
@@ -426,29 +430,32 @@ with tabs[2]:
                 """)
             
             with data_tabs[2]:
-                # Plot normalized prices
-                st.subheader("Normalized Price Series")
-                st.write("Debug: Entering Normalized Price Series tab")
-                
-                # Normalize to the first day
-                st.write("Debug: About to normalize data")
-                normalized = df / df.iloc[0] * 100
-                st.write("Debug: Normalized data shape: {}".format(normalized.shape))
-                
-                fig, ax = plt.subplots(figsize=(10, 6))
-                ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
-                ax.plot(df_with_index['Day'], normalized.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
-                
-                # Add title and labels
-                ax.set_title("Normalized Prices (First day = 100)")
-                ax.set_xlabel("Trading Day")
-                ax.set_ylabel("Normalized Price")
-                
-                # Add grid and legend
-                ax.grid(True, alpha=0.3)
-                ax.legend()
-                
-                st.pyplot(fig)
+                try:
+                    # Plot normalized prices
+                    st.subheader("Normalized Price Series")
+                    st.write("Debug: Entering Normalized Price Series tab")
+                    
+                    # Normalize to the first day
+                    st.write("Debug: About to normalize data")
+                    normalized = df / df.iloc[0] * 100
+                    st.write("Debug: Normalized data shape: " + str(normalized.shape))
+                    
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
+                    ax.plot(df_with_index['Day'], normalized.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
+                    
+                    # Add title and labels
+                    ax.set_title("Normalized Prices (First day = 100)")
+                    ax.set_xlabel("Trading Day")
+                    ax.set_ylabel("Normalized Price")
+                    
+                    # Add grid and legend
+                    ax.grid(True, alpha=0.3)
+                    ax.legend()
+                    
+                    st.pyplot(fig)
+                except Exception as e:
+                    st.error("Error in Normalized Prices tab: " + str(e))
                 
                 st.markdown("""
                 **Normalized Price Analysis:**
@@ -463,51 +470,60 @@ with tabs[2]:
                 """)
             
             with data_tabs[3]:
-                # Calculate a simple spread and z-score for demonstration
-                st.subheader("Spread Analysis")
-                
-                # Calculate ratio
-                df_spread = df.copy()
-                df_spread['Ratio'] = df_spread.iloc[:, 0] / df_spread.iloc[:, 1]
-                
-                # Calculate z-score with a 60-day window
-                window = 60
-                df_spread['Ratio_MA'] = df_spread['Ratio'].rolling(window=window).mean()
-                df_spread['Ratio_SD'] = df_spread['Ratio'].rolling(window=window).std()
-                df_spread['Z-Score'] = (df_spread['Ratio'] - df_spread['Ratio_MA']) / df_spread['Ratio_SD']
-                
-                # Drop NaN values from the beginning
-                df_spread = df_spread.dropna()
-                
-                # Add index for plotting
-                df_spread['Day'] = range(len(df_spread))
-                
-                # Create figure with two subplots
-                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
-                
-                # Plot the ratio
-                ax1.plot(df_spread['Day'], df_spread['Ratio'], label='KO/PEP Ratio')
-                ax1.plot(df_spread['Day'], df_spread['Ratio_MA'], label='{}-day Moving Average'.format(window), color='red')
-                ax1.set_title('Ratio of KO to PEP Prices')
-                ax1.set_ylabel('Price Ratio')
-                ax1.grid(True, alpha=0.3)
-                ax1.legend()
-                
-                # Plot the z-score
-                ax2.plot(df_spread['Day'], df_spread['Z-Score'], label='Z-Score', color='green')
-                ax2.axhline(y=2, color='red', linestyle='--', alpha=0.7, label='Entry Threshold (+2)')
-                ax2.axhline(y=-2, color='red', linestyle='--', alpha=0.7, label='Entry Threshold (-2)')
-                ax2.axhline(y=0.5, color='green', linestyle='--', alpha=0.5, label='Exit Threshold (+0.5)')
-                ax2.axhline(y=-0.5, color='green', linestyle='--', alpha=0.5, label='Exit Threshold (-0.5)')
-                ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-                ax2.set_title('Z-Score of KO/PEP Ratio')
-                ax2.set_ylabel('Z-Score')
-                ax2.set_xlabel('Trading Day')
-                ax2.grid(True, alpha=0.3)
-                ax2.legend()
-                
-                plt.tight_layout()
-                st.pyplot(fig)
+                try:
+                    # Calculate a simple spread and z-score for demonstration
+                    st.subheader("Spread Analysis")
+                    st.write("Debug: Entering Spread Analysis tab")
+                    
+                    # Calculate ratio
+                    df_spread = df.copy()
+                    df_spread['Ratio'] = df_spread.iloc[:, 0] / df_spread.iloc[:, 1]
+                    st.write("Debug: Calculated ratio")
+                    
+                    # Calculate z-score with a 60-day window
+                    window = 60
+                    df_spread['Ratio_MA'] = df_spread['Ratio'].rolling(window=window).mean()
+                    df_spread['Ratio_SD'] = df_spread['Ratio'].rolling(window=window).std()
+                    df_spread['Z-Score'] = (df_spread['Ratio'] - df_spread['Ratio_MA']) / df_spread['Ratio_SD']
+                    st.write("Debug: Calculated z-score")
+                    
+                    # Drop NaN values from the beginning
+                    df_spread = df_spread.dropna()
+                    
+                    # Add index for plotting
+                    df_spread['Day'] = range(len(df_spread))
+                    
+                    # Create figure with two subplots
+                    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+                    st.write("Debug: Created figure")
+                    
+                    # Plot the ratio
+                    ax1.plot(df_spread['Day'], df_spread['Ratio'], label='KO/PEP Ratio')
+                    ax1.plot(df_spread['Day'], df_spread['Ratio_MA'], label=str(window) + '-day Moving Average', color='red')
+                    ax1.set_title('Ratio of KO to PEP Prices')
+                    ax1.set_ylabel('Price Ratio')
+                    ax1.grid(True, alpha=0.3)
+                    ax1.legend()
+                    st.write("Debug: Plotted ratio")
+                    
+                    # Plot the z-score
+                    ax2.plot(df_spread['Day'], df_spread['Z-Score'], label='Z-Score', color='green')
+                    ax2.axhline(y=2, color='red', linestyle='--', alpha=0.7, label='Entry Threshold (+2)')
+                    ax2.axhline(y=-2, color='red', linestyle='--', alpha=0.7, label='Entry Threshold (-2)')
+                    ax2.axhline(y=0.5, color='green', linestyle='--', alpha=0.5, label='Exit Threshold (+0.5)')
+                    ax2.axhline(y=-0.5, color='green', linestyle='--', alpha=0.5, label='Exit Threshold (-0.5)')
+                    ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+                    ax2.set_title('Z-Score of KO/PEP Ratio')
+                    ax2.set_ylabel('Z-Score')
+                    ax2.set_xlabel('Trading Day')
+                    ax2.grid(True, alpha=0.3)
+                    ax2.legend()
+                    st.write("Debug: Plotted z-score")
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig)
+                except Exception as e:
+                    st.error("Error in Spread Analysis tab: " + str(e))
                 
                 st.markdown("""
                 **Trading Strategy Rules:**
@@ -555,7 +571,13 @@ with tabs[2]:
             - Visualization of strategy performance across different parameters
             """)
         except Exception as e:
-            st.error("Error loading or displaying data: {}".format(str(e)))
+            error_msg = str(e)
+            st.error("Error loading or displaying data: " + error_msg)
+            
+            # Special handling for string formatting errors
+            if "Unknown format code" in error_msg:
+                st.error("String formatting error detected. This is often caused by an f-string or format issue.")
+                st.info("Please contact the developer with this error message.")
 
 # Footer with references
 st.markdown("---")
