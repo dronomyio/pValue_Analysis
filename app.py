@@ -380,12 +380,12 @@ with tabs[2]:
                 st.subheader("Data Statistics")
                 st.write("**Rows:** {} trading days".format(len(df)))
                 st.write("**Columns:** {}".format(', '.join(df.columns)))
-                st.write("**KO Price Range:** ${:.2f} to ${:.2f}".format(df.iloc[:, 0].min(), df.iloc[:, 0].max()))
-                st.write("**PEP Price Range:** ${:.2f} to ${:.2f}".format(df.iloc[:, 1].min(), df.iloc[:, 1].max()))
+                st.write("**KO Price Range:** $" + "{:.2f}".format(df.iloc[:, 0].min()) + " to $" + "{:.2f}".format(df.iloc[:, 0].max()))
+                st.write("**PEP Price Range:** $" + "{:.2f}".format(df.iloc[:, 1].min()) + " to $" + "{:.2f}".format(df.iloc[:, 1].max()))
                 
                 # Calculate correlation
                 correlation = df.iloc[:, 0].corr(df.iloc[:, 1])
-                st.write("**Correlation:** {:.3f}".format(correlation))
+                st.write("**Correlation:** " + "{:.3f}".format(correlation))
             
             with data_tabs[1]:
                 # Plot the data with better formatting
@@ -397,12 +397,12 @@ with tabs[2]:
                 
                 # Plot with better formatting
                 ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
-                ax.set_ylabel("{} Price ($)".format(df.columns[0]), color='blue')
+                ax.set_ylabel("Coca-Cola Price ($)", color='blue')  # Hardcoded label instead of using format
                 
                 # Create a second y-axis for PEP
                 ax2 = ax.twinx()
                 ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=str(df.columns[1]), color='red', linewidth=2)
-                ax2.set_ylabel("{} Price ($)".format(df.columns[1]), color='red')
+                ax2.set_ylabel("PepsiCo Price ($)", color='red')  # Hardcoded label instead of using format
                 
                 # Add title and grid
                 ax.set_title("Coca-Cola vs PepsiCo Price Series")
