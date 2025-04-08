@@ -265,7 +265,7 @@ with tabs[2]:
     # Create multiple tabs for different data loading methods
     data_source_tabs = st.tabs(["Upload File", "Use Sample Data", "Enter File Path"])
     
-    data_path = "data/dataset/CokePepsi.csv"
+    data_path = "data/datasets/CokePepsi.csv"
     data_found = os.path.exists(data_path)
     
     with data_source_tabs[0]:
@@ -282,10 +282,15 @@ with tabs[2]:
                 if len(df_check.columns) >= 2:
                     # Create directory if it doesn't exist
                     os.makedirs(os.path.dirname(data_path), exist_ok=True)
+                    st.write("Creating directory: {}".format(os.path.dirname(data_path)))
                     
                     # Write the file
-                    with open(data_path, "wb") as f:
-                        f.write(bytes_data)
+                    try:
+                        with open(data_path, "wb") as f:
+                            f.write(bytes_data)
+                        st.write("File saved to: {}".format(data_path))
+                    except Exception as file_error:
+                        st.error("Error writing file: {}".format(str(file_error)))
                     
                     data_found = True
                     st.success("File uploaded and validated successfully! Size: {:.1f} KB".format(len(bytes_data)/1024))
@@ -300,7 +305,8 @@ with tabs[2]:
             # Try to copy from a known location if it exists
             sample_paths = [
                 "data/datasets/CokePepsi.csv",
-                "data/data/datasets/CokePepsi.csv"
+                "data/data/datasets/CokePepsi.csv",
+                "data/CokePepsi.csv"
             ]
             
             for sample_path in sample_paths:
@@ -308,10 +314,12 @@ with tabs[2]:
                     try:
                         # Create directory if it doesn't exist
                         os.makedirs(os.path.dirname(data_path), exist_ok=True)
+                        st.write("Creating directory: {}".format(os.path.dirname(data_path)))
                         
                         # Copy the file
                         import shutil
                         shutil.copy(sample_path, data_path)
+                        st.write("File copied from: {} to: {}".format(sample_path, data_path))
                         data_found = True
                         st.success("Sample data loaded successfully!")
                         break
@@ -330,10 +338,12 @@ with tabs[2]:
                 try:
                     # Create directory if it doesn't exist
                     os.makedirs(os.path.dirname(data_path), exist_ok=True)
+                    st.write("Creating directory: {}".format(os.path.dirname(data_path)))
                     
                     # Copy the file
                     import shutil
                     shutil.copy(custom_path, data_path)
+                    st.write("File copied from: {} to: {}".format(custom_path, data_path))
                     data_found = True
                     st.success("Data loaded successfully from {}!".format(custom_path))
                 except Exception as e:
@@ -537,7 +547,7 @@ with tabs[2]:
             - Visualization of strategy performance across different parameters
             """)
         except Exception as e:
-            st.error(f"Error loading or displaying data: {e}")
+            st.error("Error loading or displaying data: {}".format(str(e)))
 
 # Footer with references
 st.markdown("---")
