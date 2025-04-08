@@ -238,17 +238,25 @@ with tabs[2]:
     st.header("Trading Strategy Application")
     
     st.markdown("""
-    ### Coke-Pepsi Trading Strategy
+    ### Pairs Trading Strategy: Coca-Cola vs PepsiCo
     
     This section demonstrates how the concepts from Taleb's paper apply to trading strategy development and evaluation.
-    We implement a pairs trading strategy for Coca-Cola (KO) and PepsiCo (PEP) stocks and analyze:
+    We implement a pairs trading strategy for Coca-Cola (KO) and PepsiCo (PEP) stocks and analyze the role of p-values in trading.
     
-    1. How p-values vary across statistical tests in trading
-    2. How multiple parameter testing can lead to false "significant" strategies (p-hacking)
+    **What is Pairs Trading?**
+    
+    Pairs trading is a market-neutral strategy that matches a long position in one stock with a short position in another related stock.
+    The strategy is based on the assumption that two historically correlated stocks will revert to their statistical relationship after diverging.
+    
+    **Our Approach:**
+    1. Model the relationship between KO and PEP using linear regression
+    2. Calculate the spread between the actual prices and the predicted relationship
+    3. When the spread deviates significantly (measured by z-score), we take a position expecting reversion
+    4. We use p-values to assess the statistical significance of the relationship
     """)
     
     # Allow users to upload CokePepsi.csv if needed
-    uploaded_file = st.file_uploader("Upload CokePepsi.csv file if not already available")
+    uploaded_file = st.file_uploader("Upload CokePepsi.csv file if not already available", help="The file should have two columns with Coca-Cola and PepsiCo adjusted prices")
     
     data_path = "data/dataset/CokePepsi.csv"
     data_found = os.path.exists(data_path)
@@ -256,7 +264,7 @@ with tabs[2]:
     if uploaded_file is not None:
         # Save the uploaded file
         bytes_data = uploaded_file.getvalue()
-        st.write(f"File uploaded! Size: {len(bytes_data)} bytes")
+        st.success(f"File uploaded successfully! Size: {len(bytes_data)/1024:.1f} KB")
         
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(data_path), exist_ok=True)
@@ -278,35 +286,189 @@ with tabs[2]:
         try:
             df = pd.read_csv(data_path)
             
-            col1, col2 = st.columns([1, 2])
+            # Add row numbers as an index approximating time
+            df_with_index = df.copy()
+            df_with_index['Day'] = range(len(df_with_index))
             
-            with col1:
+            # Create tabs for different visualizations
+            data_tabs = st.tabs(["Data Preview", "Price Series", "Normalized Prices", "Spread Analysis"])
+            
+            with data_tabs[0]:
                 st.subheader("CokePepsi.csv Data Preview")
                 st.dataframe(df.head(10))
                 
-            with col2:
-                # Plot the data
+                # Print data statistics
+                st.subheader("Data Statistics")
+                st.write(f"**Rows:** {len(df)} trading days")
+                st.write(f"**Columns:** {', '.join(df.columns)}")
+                st.write(f"**KO Price Range:** ${df.iloc[:, 0].min():.2f} to ${df.iloc[:, 0].max():.2f}")
+                st.write(f"**PEP Price Range:** ${df.iloc[:, 1].min():.2f} to ${df.iloc[:, 1].max():.2f}")
+                
+                # Calculate correlation
+                correlation = df.iloc[:, 0].corr(df.iloc[:, 1])
+                st.write(f"**Correlation:** {correlation:.3f}")
+            
+            with data_tabs[1]:
+                # Plot the data with better formatting
                 st.subheader("Price Series")
+                
                 fig, ax = plt.subplots(figsize=(10, 6))
                 
-                for col in df.columns:
-                    ax.plot(df[col], label=col)
+                # Plot with better formatting
+                ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=f"{df.columns[0]}", color='blue', linewidth=2)
+                ax.set_ylabel(f"{df.columns[0]} Price ($)", color='blue')
                 
-                ax.set_title("Coca-Cola vs PepsiCo Prices")
-                ax.legend()
+                # Create a second y-axis for PEP
+                ax2 = ax.twinx()
+                ax2.plot(df_with_index['Day'], df_with_index.iloc[:, 1], label=f"{df.columns[1]}", color='red', linewidth=2)
+                ax2.set_ylabel(f"{df.columns[1]} Price ($)", color='red')
+                
+                # Add title and grid
+                ax.set_title("Coca-Cola vs PepsiCo Price Series")
                 ax.grid(True, alpha=0.3)
+                
+                # Add legend
+                lines1, labels1 = ax.get_legend_handles_labels()
+                lines2, labels2 = ax2.get_legend_handles_labels()
+                ax.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+                
+                # Add x-axis label
+                ax.set_xlabel("Trading Day")
+                
                 st.pyplot(fig)
+                
+                st.markdown("""
+                **Observations:**
+                - Both KO and PEP prices generally move together over time
+                - PEP trades at a higher price than KO 
+                - There are periods where the stocks diverge, creating trading opportunities
+                """)
             
+            with data_tabs[2]:
+                # Plot normalized prices
+                st.subheader("Normalized Price Series")
+                
+                # Normalize to the first day
+                normalized = df / df.iloc[0] * 100
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=f"{df.columns[0]}", color='blue', linewidth=2)
+                ax.plot(df_with_index['Day'], normalized.iloc[:, 1], label=f"{df.columns[1]}", color='red', linewidth=2)
+                
+                # Add title and labels
+                ax.set_title("Normalized Prices (First day = 100)")
+                ax.set_xlabel("Trading Day")
+                ax.set_ylabel("Normalized Price")
+                
+                # Add grid and legend
+                ax.grid(True, alpha=0.3)
+                ax.legend()
+                
+                st.pyplot(fig)
+                
+                st.markdown("""
+                **Normalized Price Analysis:**
+                
+                This chart shows the percentage change from the first day. It helps visualize:
+                - Relative performance between the two stocks
+                - Periods of divergence and convergence
+                - Long-term growth comparison
+                
+                The pairs trading strategy exploits periods when one stock outperforms or underperforms the other
+                temporarily, expecting the relationship to revert to the mean.
+                """)
+            
+            with data_tabs[3]:
+                # Calculate a simple spread and z-score for demonstration
+                st.subheader("Spread Analysis")
+                
+                # Calculate ratio
+                df_spread = df.copy()
+                df_spread['Ratio'] = df_spread.iloc[:, 0] / df_spread.iloc[:, 1]
+                
+                # Calculate z-score with a 60-day window
+                window = 60
+                df_spread['Ratio_MA'] = df_spread['Ratio'].rolling(window=window).mean()
+                df_spread['Ratio_SD'] = df_spread['Ratio'].rolling(window=window).std()
+                df_spread['Z-Score'] = (df_spread['Ratio'] - df_spread['Ratio_MA']) / df_spread['Ratio_SD']
+                
+                # Drop NaN values from the beginning
+                df_spread = df_spread.dropna()
+                
+                # Add index for plotting
+                df_spread['Day'] = range(len(df_spread))
+                
+                # Create figure with two subplots
+                fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+                
+                # Plot the ratio
+                ax1.plot(df_spread['Day'], df_spread['Ratio'], label='KO/PEP Ratio')
+                ax1.plot(df_spread['Day'], df_spread['Ratio_MA'], label=f'{window}-day Moving Average', color='red')
+                ax1.set_title('Ratio of KO to PEP Prices')
+                ax1.set_ylabel('Price Ratio')
+                ax1.grid(True, alpha=0.3)
+                ax1.legend()
+                
+                # Plot the z-score
+                ax2.plot(df_spread['Day'], df_spread['Z-Score'], label='Z-Score', color='green')
+                ax2.axhline(y=2, color='red', linestyle='--', alpha=0.7, label='Entry Threshold (+2)')
+                ax2.axhline(y=-2, color='red', linestyle='--', alpha=0.7, label='Entry Threshold (-2)')
+                ax2.axhline(y=0.5, color='green', linestyle='--', alpha=0.5, label='Exit Threshold (+0.5)')
+                ax2.axhline(y=-0.5, color='green', linestyle='--', alpha=0.5, label='Exit Threshold (-0.5)')
+                ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+                ax2.set_title('Z-Score of KO/PEP Ratio')
+                ax2.set_ylabel('Z-Score')
+                ax2.set_xlabel('Trading Day')
+                ax2.grid(True, alpha=0.3)
+                ax2.legend()
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                st.markdown("""
+                **Trading Strategy Rules:**
+                
+                1. **Enter** a position when the z-score exceeds +2 or -2 standard deviations:
+                   - If z-score > +2: Short KO and Long PEP (ratio is too high)
+                   - If z-score < -2: Long KO and Short PEP (ratio is too low)
+                
+                2. **Exit** the position when the z-score returns to normal levels:
+                   - If position is open and z-score returns to between -0.5 and +0.5
+                
+                3. **P-Value Analysis**:
+                   - We use p-values to determine if the relationship between KO and PEP is statistically significant
+                   - Only take trades when the p-value of the regression is below a threshold (typically 0.05)
+                   - This helps avoid trading on random noise
+                """)
+            
+            st.markdown("""
+            ### P-Value Considerations in Trading Strategies
+            
+            When developing this pairs trading strategy, the role of p-values is critical:
+            
+            1. **False Positives**: Even with a threshold of p < 0.05, about 5% of trading signals will be false positives
+            
+            2. **P-Value Instability**: The meta-distribution of p-values shows that they vary dramatically across statistically identical samples
+            
+            3. **P-Hacking Risk**: Testing multiple parameter combinations (window sizes, thresholds) leads to finding "significant" strategies by chance
+            
+            4. **Solution**: Robust out-of-sample testing and awareness of the multiple testing problem are essential
+            """)
+            
+            # Information about the full app
             st.info("""
-            The extended trading strategy functionality is available in the standalone app:
+            ### Extended Trading Strategy Analysis
+            
+            The comprehensive trading strategy functionality is available in the standalone app:
             ```
             streamlit run run_cokepepsi_analysis.py
             ```
             
             This includes:
-            - Full pairs trading strategy implementation
+            - Complete pairs trading strategy implementation with performance metrics
             - P-value meta-distribution analysis through bootstrap sampling
-            - P-hacking risk evaluation through parameter testing
+            - P-hacking risk evaluation by testing multiple parameter combinations
+            - Visualization of strategy performance across different parameters
             """)
         except Exception as e:
             st.error(f"Error loading or displaying data: {e}")
