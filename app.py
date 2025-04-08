@@ -259,25 +259,87 @@ with tabs[2]:
     4. We use p-values to assess the statistical significance of the relationship
     """)
     
-    # Allow users to upload CokePepsi.csv if needed
-    uploaded_file = st.file_uploader("Upload CokePepsi.csv file if not already available", help="The file should have two columns with Coca-Cola and PepsiCo adjusted prices")
+    # File handling section
+    st.subheader("Load CokePepsi.csv Data")
+    
+    # Create multiple tabs for different data loading methods
+    data_source_tabs = st.tabs(["Upload File", "Use Sample Data", "Enter File Path"])
     
     data_path = "data/dataset/CokePepsi.csv"
     data_found = os.path.exists(data_path)
     
-    if uploaded_file is not None:
-        # Save the uploaded file
-        bytes_data = uploaded_file.getvalue()
-        st.success("File uploaded successfully! Size: {:.1f} KB".format(len(bytes_data)/1024))
+    with data_source_tabs[0]:
+        st.write("Upload a CSV file with Coca-Cola and PepsiCo adjusted prices:")
+        uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"], help="The file should have two columns with Coca-Cola and PepsiCo adjusted prices")
         
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(data_path), exist_ok=True)
+        if uploaded_file is not None:
+            try:
+                # Save the uploaded file
+                bytes_data = uploaded_file.getvalue()
+                
+                # First try to read it to validate it's a proper CSV
+                df_check = pd.read_csv(io.BytesIO(bytes_data))
+                if len(df_check.columns) >= 2:
+                    # Create directory if it doesn't exist
+                    os.makedirs(os.path.dirname(data_path), exist_ok=True)
+                    
+                    # Write the file
+                    with open(data_path, "wb") as f:
+                        f.write(bytes_data)
+                    
+                    data_found = True
+                    st.success("File uploaded and validated successfully! Size: {:.1f} KB".format(len(bytes_data)/1024))
+                else:
+                    st.error("The CSV file needs at least 2 columns for KO and PEP prices.")
+            except Exception as e:
+                st.error("Error uploading file: {}".format(str(e)))
+    
+    with data_source_tabs[1]:
+        st.write("Use the included sample data for demonstration:")
+        if st.button("Load Sample Data"):
+            # Try to copy from a known location if it exists
+            sample_paths = [
+                "data/datasets/CokePepsi.csv",
+                "data/data/datasets/CokePepsi.csv"
+            ]
+            
+            for sample_path in sample_paths:
+                if os.path.exists(sample_path):
+                    try:
+                        # Create directory if it doesn't exist
+                        os.makedirs(os.path.dirname(data_path), exist_ok=True)
+                        
+                        # Copy the file
+                        import shutil
+                        shutil.copy(sample_path, data_path)
+                        data_found = True
+                        st.success("Sample data loaded successfully!")
+                        break
+                    except Exception as e:
+                        st.error("Error loading sample data: {}".format(str(e)))
+            
+            if not data_found:
+                st.error("Could not find sample data files. Please use the upload option instead.")
+    
+    with data_source_tabs[2]:
+        st.write("Specify the path to an existing CokePepsi.csv file:")
+        custom_path = st.text_input("Enter path to CSV file:", placeholder="e.g., /path/to/CokePepsi.csv")
         
-        # Write the file
-        with open(data_path, "wb") as f:
-            f.write(bytes_data)
-        
-        data_found = True
+        if custom_path and st.button("Load from Path"):
+            if os.path.exists(custom_path):
+                try:
+                    # Create directory if it doesn't exist
+                    os.makedirs(os.path.dirname(data_path), exist_ok=True)
+                    
+                    # Copy the file
+                    import shutil
+                    shutil.copy(custom_path, data_path)
+                    data_found = True
+                    st.success("Data loaded successfully from {}!".format(custom_path))
+                except Exception as e:
+                    st.error("Error loading data from path: {}".format(str(e)))
+            else:
+                st.error("File not found at the specified path.")
     
     if not data_found:
         st.warning("""
