@@ -214,7 +214,7 @@ with tabs[1]:
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Create boxplots
-        ax.boxplot(min_p_values, labels=range(1, max_trials + 1))
+        ax.boxplot(min_p_values, tick_labels=range(1, max_trials + 1))
         
         # Add horizontal line at significance level
         ax.axhline(y=significance, color='red', linestyle='--', alpha=0.7, 
