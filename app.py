@@ -22,22 +22,29 @@ stats = LightPValueStatistics()
 # Initialize trading strategy
 @st.cache_resource
 def load_strategy():
-    # Try multiple possible paths for the data file
-    potential_paths = [
-        "data/datasets/CokePepsi.csv",
-        "data/data/datasets/CokePepsi.csv",
-        "/mount/src/pvalue_analysis/data/datasets/CokePepsi.csv"
-    ]
+    # Use the data/dataset path primarily
+    data_path = "data/dataset/CokePepsi.csv"
     
-    for path in potential_paths:
-        try:
-            return CokePepsiTradingStrategy(path)
-        except (FileNotFoundError, ValueError) as e:
-            if path == potential_paths[-1]:
-                st.error(f"Failed to load CokePepsi data from any path. Error: {e}")
-                # Return a simple message instead of raising an error
-                return None
-            continue
+    try:
+        # Try to load the strategy from the main path
+        return CokePepsiTradingStrategy(data_path)
+    except (FileNotFoundError, ValueError) as e:
+        # Fall back to alternative paths if main path fails
+        fallback_paths = [
+            "data/datasets/CokePepsi.csv",
+            "data/data/datasets/CokePepsi.csv",
+            "/mount/src/pvalue_analysis/data/dataset/CokePepsi.csv"
+        ]
+        
+        for path in fallback_paths:
+            try:
+                return CokePepsiTradingStrategy(path)
+            except (FileNotFoundError, ValueError):
+                continue
+        
+        # If all paths fail, show error and return None
+        st.error(f"Failed to load CokePepsi data. Error: {e}")
+        return None
 
 strategy = load_strategy()
 
