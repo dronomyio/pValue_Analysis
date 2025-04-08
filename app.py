@@ -126,7 +126,7 @@ with tabs[0]:
         
         # Plot histogram
         ax.hist(p_values, bins=30, density=True, alpha=0.7, color='skyblue', 
-                label='Simulated p-values (n={})'.format(n_samples))
+                label='Simulated p-values (n=' + str(n_samples) + ')')
         
         # Plot theoretical density if requested
         if show_density:
@@ -138,12 +138,12 @@ with tabs[0]:
         ax.axvline(x=0.05, color='green', linestyle='--', alpha=0.7, label='p=0.05')
         
         # Add vertical line at p=pM
-        ax.axvline(x=pM, color='purple', linestyle='-', alpha=0.7, label='True median p={}'.format(pM))
+        ax.axvline(x=pM, color='purple', linestyle='-', alpha=0.7, label='True median p=' + str(pM))
         
         # Set labels and title
         ax.set_xlabel('p-value')
         ax.set_ylabel('Density')
-        ax.set_title('Meta-Distribution of P-Values (True Median p={})'.format(pM))
+        ax.set_title('Meta-Distribution of P-Values (True Median p=' + str(pM) + ')')
         ax.legend()
         
         # Set x-axis to log scale for better visualization of small p-values
@@ -226,7 +226,7 @@ with tabs[1]:
         
         # Add horizontal line at significance level
         ax.axhline(y=significance, color='red', linestyle='--', alpha=0.7, 
-                   label='Significance level (α={})'.format(significance))
+                   label='Significance level (α=' + str(significance) + ')')
         
         # Add line for expected minimum p-values
         ax.plot(range(1, max_trials + 1), [expected_mins[m] for m in range(1, max_trials + 1)], 
@@ -305,9 +305,9 @@ with tabs[2]:
                     try:
                         with open(data_path, "wb") as f:
                             f.write(bytes_data)
-                        st.write("File saved to: {}".format(data_path))
+                        st.write("File saved to: " + data_path)
                     except Exception as file_error:
-                        st.error("Error writing file: {}".format(str(file_error)))
+                        st.error("Error writing file: " + str(file_error))
                     
                     data_found = True
                     try:
@@ -322,7 +322,7 @@ with tabs[2]:
                 else:
                     st.error("The CSV file needs at least 2 columns for KO and PEP prices.")
             except Exception as e:
-                st.error("Error uploading file: {}".format(str(e)))
+                st.error("Error uploading file: " + str(e))
     
     with data_source_tabs[1]:
         st.write("Use the included sample data for demonstration:")
@@ -339,17 +339,17 @@ with tabs[2]:
                     try:
                         # Create directory if it doesn't exist
                         os.makedirs(os.path.dirname(data_path), exist_ok=True)
-                        st.write("Creating directory: {}".format(os.path.dirname(data_path)))
+                        st.write("Creating directory: " + os.path.dirname(data_path))
                         
                         # Copy the file
                         import shutil
                         shutil.copy(sample_path, data_path)
-                        st.write("File copied from: {} to: {}".format(sample_path, data_path))
+                        st.write("File copied from: " + sample_path + " to: " + data_path)
                         data_found = True
                         st.success("Sample data loaded successfully!")
                         break
                     except Exception as e:
-                        st.error("Error loading sample data: {}".format(str(e)))
+                        st.error("Error loading sample data: " + str(e))
             
             if not data_found:
                 st.error("Could not find sample data files. Please use the upload option instead.")
@@ -368,11 +368,11 @@ with tabs[2]:
                     # Copy the file
                     import shutil
                     shutil.copy(custom_path, data_path)
-                    st.write("File copied from: {} to: {}".format(custom_path, data_path))
+                    st.write("File copied from: " + custom_path + " to: " + data_path)
                     data_found = True
-                    st.success("Data loaded successfully from {}!".format(custom_path))
+                    st.success("Data loaded successfully from " + custom_path + "!")
                 except Exception as e:
-                    st.error("Error loading data from path: {}".format(str(e)))
+                    st.error("Error loading data from path: " + str(e))
             else:
                 st.error("File not found at the specified path.")
     
@@ -383,6 +383,8 @@ with tabs[2]:
         The file should contain adjusted closing prices for Coca-Cola (KO) and PepsiCo (PEP) stocks.
         """)
     else:
+        # Debug section - before anything else
+        st.write("Debug: Starting data processing")
         # Load and display data
         try:
             st.write("Debug: Loading data from " + data_path)
@@ -633,10 +635,17 @@ with tabs[2]:
             error_msg = str(e)
             st.error("Error loading or displaying data: " + error_msg)
             
-            # Special handling for string formatting errors
+            # Special handling for specific errors
             if "Unknown format code" in error_msg:
                 st.error("String formatting error detected. This is often caused by an f-string or format issue.")
                 st.info("Please contact the developer with this error message.")
+            elif "doesn't define round method" in error_msg:
+                st.error("Type error with round() function. This is caused by trying to round a non-numeric value.")
+                st.info("Try a different data file or report this issue to the developer.")
+                
+                # Print stack trace for debugging (remove in production)
+                import traceback
+                st.code(traceback.format_exc(), language="python")
 
 # Footer with references
 st.markdown("---")
