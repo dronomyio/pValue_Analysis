@@ -486,22 +486,22 @@ with tabs[4]:
             if hasattr(strategy, 'p_value_ensembles') and strategy.p_value_ensembles:
                 fig = strategy.plot_p_value_distribution()
                 st.pyplot(fig)
-            
-            st.markdown("""
-            ### Interpretation
-            
-            This visualization shows how p-values are distributed across multiple statistically similar samples.
-            The extreme variability demonstrates why relying on a single p-value from a single test can be misleading.
-            
-            Note the difference between training and test sets:
-            - Training p-values are generally lower due to in-sample fitting (p-hacking)
-            - Test p-values represent out-of-sample performance and are generally higher (reality check)
-            
-            The proportion of "significant" results should theoretically match the significance level (e.g., 5% for α=0.05) under the null hypothesis,
-            but often exceeds this due to factors like autocorrelation and non-stationarity in financial time series.
-            """)
-        else:
-            st.info("No p-value ensembles generated yet. Click 'Generate P-Value Ensembles' to see the results.")
+                
+                st.markdown("""
+                ### Interpretation
+                
+                This visualization shows how p-values are distributed across multiple statistically similar samples.
+                The extreme variability demonstrates why relying on a single p-value from a single test can be misleading.
+                
+                Note the difference between training and test sets:
+                - Training p-values are generally lower due to in-sample fitting (p-hacking)
+                - Test p-values represent out-of-sample performance and are generally higher (reality check)
+                
+                The proportion of "significant" results should theoretically match the significance level (e.g., 5% for α=0.05) under the null hypothesis,
+                but often exceeds this due to factors like autocorrelation and non-stationarity in financial time series.
+                """)
+            else:
+                st.info("No p-value ensembles generated yet. Click 'Generate P-Value Ensembles' to see the results.")
 
 # Tab 6: P-Hacking in Trading
 with tabs[5]:
