@@ -22,7 +22,22 @@ stats = LightPValueStatistics()
 # Initialize trading strategy
 @st.cache_resource
 def load_strategy():
-    return CokePepsiTradingStrategy("data/datasets/CokePepsi.csv")
+    # Try multiple possible paths for the data file
+    potential_paths = [
+        "data/datasets/CokePepsi.csv",
+        "data/data/datasets/CokePepsi.csv",
+        "/mount/src/pvalue_analysis/data/datasets/CokePepsi.csv"
+    ]
+    
+    for path in potential_paths:
+        try:
+            return CokePepsiTradingStrategy(path)
+        except (FileNotFoundError, ValueError) as e:
+            if path == potential_paths[-1]:
+                st.error(f"Failed to load CokePepsi data from any path. Error: {e}")
+                # Return a simple message instead of raising an error
+                return None
+            continue
 
 strategy = load_strategy()
 
@@ -249,112 +264,134 @@ with tabs[1]:
 # Tab 3: Price Data Analysis
 with tabs[2]:
     st.header("Price Data Analysis")
-    st.markdown("""
-    First, let's examine the price data for Coca-Cola (KO) and PepsiCo (PEP) stocks.
-    These two companies are ideal for pairs trading as they operate in the same industry and tend to be affected by similar market factors.
-    """)
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Raw Price Series")
-        fig = strategy.plot_price_series()
-        st.pyplot(fig)
+    if strategy is None:
+        st.error("⚠️ Unable to load Coke-Pepsi data. Please check the data paths and file format.")
+    else:
+        st.markdown("""
+        First, let's examine the price data for Coca-Cola (KO) and PepsiCo (PEP) stocks.
+        These two companies are ideal for pairs trading as they operate in the same industry and tend to be affected by similar market factors.
+        """)
         
-    with col2:
-        st.subheader("Normalized Price Series")
-        fig = strategy.plot_normalized_prices()
-        st.pyplot(fig)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Raw Price Series")
+            fig = strategy.plot_price_series()
+            st.pyplot(fig)
+            
+        with col2:
+            st.subheader("Normalized Price Series")
+            fig = strategy.plot_normalized_prices()
+            st.pyplot(fig)
     
-    st.markdown("""
-    ### Spread Analysis
+    if strategy is not None:
+        st.markdown("""
+        ### Spread Analysis
+        
+        The pairs trading strategy is based on the spread between KO and PEP prices, adjusted by a hedge ratio.
+        When the spread deviates significantly from its mean, it signals a potential trading opportunity.
+        """)
+        
+        # Calculate and display the spread
+        window_size = st.slider("Window Size for Spread Calculation", 30, 120, 60, 5)
+        try:
+            spread_df = strategy.calculate_spread(window_size=window_size)
+        except Exception as e:
+            st.error(f"Error calculating spread: {e}")
+            spread_df = None
     
-    The pairs trading strategy is based on the spread between KO and PEP prices, adjusted by a hedge ratio.
-    When the spread deviates significantly from its mean, it signals a potential trading opportunity.
-    """)
+    if strategy is not None and spread_df is not None:
+        try:
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
+            
+            # Plot spread
+            ax1.plot(spread_df['spread'], label='Spread')
+            ax1.set_title('Spread Between KO and PEP (hedge ratio adjusted)')
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
+            
+            # Plot z-score
+            ax2.plot(spread_df['z_score'], label='Z-Score', color='orange')
+            ax2.axhline(y=2.0, color='r', linestyle='--', alpha=0.3, label='Entry Threshold (+2)')
+            ax2.axhline(y=-2.0, color='r', linestyle='--', alpha=0.3, label='Entry Threshold (-2)')
+            ax2.axhline(y=0.5, color='g', linestyle='--', alpha=0.3, label='Exit Threshold (+0.5)')
+            ax2.axhline(y=-0.5, color='g', linestyle='--', alpha=0.3, label='Exit Threshold (-0.5)')
+            ax2.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+            ax2.set_title('Z-Score of Spread (normalized)')
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f"Error plotting spread data: {e}")
     
-    # Calculate and display the spread
-    window_size = st.slider("Window Size for Spread Calculation", 30, 120, 60, 5)
-    spread_df = strategy.calculate_spread(window_size=window_size)
-    
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-    
-    # Plot spread
-    ax1.plot(spread_df['spread'], label='Spread')
-    ax1.set_title('Spread Between KO and PEP (hedge ratio adjusted)')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
-    
-    # Plot z-score
-    ax2.plot(spread_df['z_score'], label='Z-Score', color='orange')
-    ax2.axhline(y=2.0, color='r', linestyle='--', alpha=0.3, label='Entry Threshold (+2)')
-    ax2.axhline(y=-2.0, color='r', linestyle='--', alpha=0.3, label='Entry Threshold (-2)')
-    ax2.axhline(y=0.5, color='g', linestyle='--', alpha=0.3, label='Exit Threshold (+0.5)')
-    ax2.axhline(y=-0.5, color='g', linestyle='--', alpha=0.3, label='Exit Threshold (-0.5)')
-    ax2.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-    ax2.set_title('Z-Score of Spread (normalized)')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    st.pyplot(fig)
-    
-    st.markdown("""
-    ### Hedge Ratio and P-Value Analysis
-    
-    The hedge ratio determines the relationship between KO and PEP prices in our pairs trading strategy.
-    The p-value indicates the statistical significance of this relationship.
-    """)
-    
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-    
-    # Plot hedge ratio
-    ax1.plot(spread_df['hedge_ratio'], label='Hedge Ratio')
-    ax1.set_title('Hedge Ratio (Beta) Between KO and PEP')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
-    
-    # Plot p-value
-    ax2.plot(spread_df['p_value'], label='P-Value', color='green')
-    ax2.axhline(y=0.05, color='r', linestyle='--', alpha=0.3, label='Significance Threshold (p=0.05)')
-    ax2.set_title('P-Value of Regression (lower values indicate stronger relationship)')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
-    ax2.set_yscale('log')  # Log scale for better visualization of small p-values
-    
-    plt.tight_layout()
-    st.pyplot(fig)
+    if strategy is not None and spread_df is not None:
+        try:
+            st.markdown("""
+            ### Hedge Ratio and P-Value Analysis
+            
+            The hedge ratio determines the relationship between KO and PEP prices in our pairs trading strategy.
+            The p-value indicates the statistical significance of this relationship.
+            """)
+            
+            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
+            
+            # Plot hedge ratio
+            ax1.plot(spread_df['hedge_ratio'], label='Hedge Ratio')
+            ax1.set_title('Hedge Ratio (Beta) Between KO and PEP')
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
+            
+            # Plot p-value
+            ax2.plot(spread_df['p_value'], label='P-Value', color='green')
+            ax2.axhline(y=0.05, color='r', linestyle='--', alpha=0.3, label='Significance Threshold (p=0.05)')
+            ax2.set_title('P-Value of Regression (lower values indicate stronger relationship)')
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
+            ax2.set_yscale('log')  # Log scale for better visualization of small p-values
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f"Error plotting hedge ratio and p-value data: {e}")
 
 # Tab 4: Strategy Backtest
 with tabs[3]:
     st.header("Pairs Trading Strategy Backtest")
-    st.markdown("""
-    This section demonstrates a simple pairs trading strategy based on the spread between KO and PEP.
     
-    **Strategy Rules:**
-    1. When the spread's z-score exceeds the entry threshold, enter a position (long the underperformer, short the outperformer)
-    2. When the spread's z-score returns within the exit threshold, exit the position
-    3. Only enter trades when the p-value of the regression is below the significance threshold
-    """)
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.subheader("Strategy Parameters")
+    if strategy is None:
+        st.error("⚠️ Unable to load Coke-Pepsi data. Please check the data paths and file format.")
+    else:
+        st.markdown("""
+        This section demonstrates a simple pairs trading strategy based on the spread between KO and PEP.
         
-        backtest_window = st.slider("Window Size", 30, 120, 60, 5, key="backtest_window")
-        entry_threshold = st.slider("Entry Threshold (Z-Score)", 1.0, 3.0, 2.0, 0.1)
-        exit_threshold = st.slider("Exit Threshold (Z-Score)", 0.1, 1.5, 0.5, 0.1)
-        p_value_threshold = st.slider("P-Value Threshold", 0.001, 0.1, 0.05, 0.001, format="%.3f", key="p_value_threshold_backtest")
+        **Strategy Rules:**
+        1. When the spread's z-score exceeds the entry threshold, enter a position (long the underperformer, short the outperformer)
+        2. When the spread's z-score returns within the exit threshold, exit the position
+        3. Only enter trades when the p-value of the regression is below the significance threshold
+        """)
+    
+    if strategy is not None:
+        col1, col2 = st.columns([1, 2])
         
-        if st.button("Run Backtest"):
-            with st.spinner("Running backtest..."):
-                results, sharpe = strategy.backtest_strategy(
-                    window_size=backtest_window,
-                    entry_threshold=entry_threshold,
-                    exit_threshold=exit_threshold,
-                    p_value_threshold=p_value_threshold
-                )
+        with col1:
+            st.subheader("Strategy Parameters")
+            
+            backtest_window = st.slider("Window Size", 30, 120, 60, 5, key="backtest_window")
+            entry_threshold = st.slider("Entry Threshold (Z-Score)", 1.0, 3.0, 2.0, 0.1)
+            exit_threshold = st.slider("Exit Threshold (Z-Score)", 0.1, 1.5, 0.5, 0.1)
+            p_value_threshold = st.slider("P-Value Threshold", 0.001, 0.1, 0.05, 0.001, format="%.3f", key="p_value_threshold_backtest")
+            
+            if st.button("Run Backtest"):
+                with st.spinner("Running backtest..."):
+                    results, sharpe = strategy.backtest_strategy(
+                        window_size=backtest_window,
+                        entry_threshold=entry_threshold,
+                        exit_threshold=exit_threshold,
+                        p_value_threshold=p_value_threshold
+                    )
                 
                 st.success(f"Backtest complete! Sharpe Ratio: {sharpe:.2f}")
                 
@@ -369,55 +406,61 @@ with tabs[3]:
                 st.metric("Annual Volatility", f"{annual_vol:.2%}")
                 st.metric("Sharpe Ratio", f"{sharpe:.2f}")
     
-    with col2:
-        st.subheader("Strategy Results")
-        
-        if len(strategy.strategy_results) > 0:
-            # Get the current strategy ID
-            current_strategy_id = f"w{backtest_window}_e{entry_threshold}_x{exit_threshold}_p{p_value_threshold}"
+    if strategy is not None:
+        with col2:
+            st.subheader("Strategy Results")
             
-            # Check if the current strategy has been backtested
-            if current_strategy_id in strategy.strategy_results:
-                fig = strategy.plot_strategy_results(current_strategy_id)
-                st.pyplot(fig)
+            if hasattr(strategy, 'strategy_results') and len(strategy.strategy_results) > 0:
+                # Get the current strategy ID
+                current_strategy_id = f"w{backtest_window}_e{entry_threshold}_x{exit_threshold}_p{p_value_threshold}"
+                
+                # Check if the current strategy has been backtested
+                if current_strategy_id in strategy.strategy_results:
+                    fig = strategy.plot_strategy_results(current_strategy_id)
+                    st.pyplot(fig)
+                else:
+                    # If not, use the most recent strategy
+                    latest_strategy_id = list(strategy.strategy_results.keys())[-1]
+                    fig = strategy.plot_strategy_results(latest_strategy_id)
+                    st.pyplot(fig)
+                    st.info(f"Showing results for strategy with parameters: {strategy.strategy_results[latest_strategy_id]['params']}. Run a backtest with current parameters to update.")
             else:
-                # If not, use the most recent strategy
-                latest_strategy_id = list(strategy.strategy_results.keys())[-1]
-                fig = strategy.plot_strategy_results(latest_strategy_id)
-                st.pyplot(fig)
-                st.info(f"Showing results for strategy with parameters: {strategy.strategy_results[latest_strategy_id]['params']}. Run a backtest with current parameters to update.")
-        else:
-            st.info("No backtest results yet. Run a backtest to see the results.")
+                st.info("No backtest results yet. Run a backtest to see the results.")
 
 # Tab 5: P-Value Meta-Distribution in Trading
 with tabs[4]:
     st.header("P-Value Meta-Distribution in Trading")
-    st.markdown("""
-    This section demonstrates how p-values can vary dramatically across statistically identical trading strategies.
-    We generate multiple bootstrap samples from the data and calculate the p-value for each sample.
     
-    **Key Insights:**
-    - Even when the true relationship between assets exists, p-values can be extremely unstable
-    - This instability leads to potential false positives and false negatives in trading strategy development
-    - The meta-distribution of p-values is highly skewed, especially for small p-values
-    """)
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.subheader("Parameters")
+    if strategy is None:
+        st.error("⚠️ Unable to load Coke-Pepsi data. Please check the data paths and file format.")
+    else:    
+        st.markdown("""
+        This section demonstrates how p-values can vary dramatically across statistically identical trading strategies.
+        We generate multiple bootstrap samples from the data and calculate the p-value for each sample.
         
-        ensemble_samples = st.slider("Number of Bootstrap Samples", 100, 1000, 500, 100)
-        ensemble_window = st.slider("Window Size for Regression", 30, 120, 60, 5, key="ensemble_window")
-        test_size = st.slider("Test Set Size", 0.1, 0.5, 0.3, 0.05)
+        **Key Insights:**
+        - Even when the true relationship between assets exists, p-values can be extremely unstable
+        - This instability leads to potential false positives and false negatives in trading strategy development
+        - The meta-distribution of p-values is highly skewed, especially for small p-values
+        """)
+    
+    if strategy is not None:
+        col1, col2 = st.columns([1, 2])
         
-        if st.button("Generate P-Value Ensembles"):
-            with st.spinner("Generating p-value ensembles..."):
-                ensembles = strategy.generate_p_value_ensembles(
-                    num_samples=ensemble_samples,
-                    window_size=ensemble_window,
-                    test_size=test_size
-                )
+        with col1:
+            st.subheader("Parameters")
+            
+            ensemble_samples = st.slider("Number of Bootstrap Samples", 100, 1000, 500, 100)
+            ensemble_window = st.slider("Window Size for Regression", 30, 120, 60, 5, key="ensemble_window")
+            test_size = st.slider("Test Set Size", 0.1, 0.5, 0.3, 0.05)
+            
+            if st.button("Generate P-Value Ensembles"):
+                with st.spinner("Generating p-value ensembles..."):
+                    ensembles = strategy.generate_p_value_ensembles(
+                        num_samples=ensemble_samples,
+                        window_size=ensemble_window,
+                        test_size=test_size
+                    )
                 
                 st.success(f"Generated {ensemble_samples} p-value samples!")
                 
@@ -436,12 +479,13 @@ with tabs[4]:
                     st.metric("Median Test P-Value", f"{np.median(test_p_values):.4f}")
                     st.metric("Proportion of 'Significant' Test Results (p < 0.05)", f"{np.mean(test_p_values < 0.05):.2%}")
     
-    with col2:
-        st.subheader("P-Value Distribution Visualization")
-        
-        if hasattr(strategy, 'p_value_ensembles') and strategy.p_value_ensembles:
-            fig = strategy.plot_p_value_distribution()
-            st.pyplot(fig)
+    if strategy is not None:
+        with col2:
+            st.subheader("P-Value Distribution Visualization")
+            
+            if hasattr(strategy, 'p_value_ensembles') and strategy.p_value_ensembles:
+                fig = strategy.plot_p_value_distribution()
+                st.pyplot(fig)
             
             st.markdown("""
             ### Interpretation
@@ -462,74 +506,80 @@ with tabs[4]:
 # Tab 6: P-Hacking in Trading
 with tabs[5]:
     st.header("P-Hacking Risk in Trading Strategy Development")
-    st.markdown("""
-    This section demonstrates how testing multiple parameter combinations can lead to false "significant" trading strategies (p-hacking).
     
-    **Key Insights:**
-    - Even when no true edge exists, testing multiple parameters will likely yield "successful" strategies by chance
-    - The more parameter combinations tested, the higher the probability of finding a seemingly profitable strategy
-    - This phenomenon is directly related to the meta-distribution of p-values and multiple testing issues
-    """)
+    if strategy is None:
+        st.error("⚠️ Unable to load Coke-Pepsi data. Please check the data paths and file format.")
+    else:
+        st.markdown("""
+        This section demonstrates how testing multiple parameter combinations can lead to false "significant" trading strategies (p-hacking).
+        
+        **Key Insights:**
+        - Even when no true edge exists, testing multiple parameters will likely yield "successful" strategies by chance
+        - The more parameter combinations tested, the higher the probability of finding a seemingly profitable strategy
+        - This phenomenon is directly related to the meta-distribution of p-values and multiple testing issues
+        """)
     
-    col1, col2 = st.columns([1, 2])
+    if strategy is not None:
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.subheader("Parameters")
+            
+            st.markdown("Select parameter ranges to test:")
+            
+            window_min = st.slider("Minimum Window Size", 20, 60, 30, 5)
+            window_max = st.slider("Maximum Window Size", 60, 120, 90, 5)
+            window_step = st.slider("Window Size Step", 5, 30, 15, 5)
+            window_sizes = list(range(window_min, window_max + 1, window_step))
+            
+            entry_min = st.slider("Minimum Entry Threshold", 1.0, 2.0, 1.5, 0.1)
+            entry_max = st.slider("Maximum Entry Threshold", 2.0, 3.5, 3.0, 0.1)
+            entry_step = st.slider("Entry Threshold Step", 0.1, 0.5, 0.5, 0.1)
+            entry_thresholds = [round(t, 1) for t in np.arange(entry_min, entry_max + 0.1, entry_step)]
+            
+            exit_min = st.slider("Minimum Exit Threshold", 0.1, 0.5, 0.5, 0.1)
+            exit_max = st.slider("Maximum Exit Threshold", 0.5, 2.0, 1.5, 0.1)
+            exit_step = st.slider("Exit Threshold Step", 0.1, 0.5, 0.5, 0.1)
+            exit_thresholds = [round(t, 1) for t in np.arange(exit_min, exit_max + 0.1, exit_step)]
+            
+            p_thresholds = [0.01, 0.05, 0.1]
+            
+            parameter_ranges = {
+                'window_size': window_sizes,
+                'entry_threshold': entry_thresholds,
+                'exit_threshold': exit_thresholds,
+                'p_value_threshold': p_thresholds
+            }
+            
+            # Calculate total number of combinations
+            total_combinations = (
+                len(window_sizes) * 
+                len(entry_thresholds) * 
+                len(exit_thresholds) * 
+                len(p_thresholds)
+            )
+            
+            st.metric("Total Parameter Combinations", total_combinations)
+            
+            if total_combinations > 200:
+                st.warning(f"Testing {total_combinations} parameter combinations may take a while. Consider reducing the ranges.")
+            
+            if st.button("Run P-Hacking Analysis"):
+                if total_combinations > 0:
+                    with st.spinner(f"Testing {total_combinations} parameter combinations..."):
+                        results_df = strategy.evaluate_p_hacking_risk(parameter_ranges)
+                        st.success(f"Analysis complete! Tested {len(results_df)} parameter combinations.")
+                else:
+                    st.error("No parameter combinations to test. Please adjust the parameter ranges.")
     
-    with col1:
-        st.subheader("Parameters")
-        
-        st.markdown("Select parameter ranges to test:")
-        
-        window_min = st.slider("Minimum Window Size", 20, 60, 30, 5)
-        window_max = st.slider("Maximum Window Size", 60, 120, 90, 5)
-        window_step = st.slider("Window Size Step", 5, 30, 15, 5)
-        window_sizes = list(range(window_min, window_max + 1, window_step))
-        
-        entry_min = st.slider("Minimum Entry Threshold", 1.0, 2.0, 1.5, 0.1)
-        entry_max = st.slider("Maximum Entry Threshold", 2.0, 3.5, 3.0, 0.1)
-        entry_step = st.slider("Entry Threshold Step", 0.1, 0.5, 0.5, 0.1)
-        entry_thresholds = [round(t, 1) for t in np.arange(entry_min, entry_max + 0.1, entry_step)]
-        
-        exit_min = st.slider("Minimum Exit Threshold", 0.1, 0.5, 0.5, 0.1)
-        exit_max = st.slider("Maximum Exit Threshold", 0.5, 2.0, 1.5, 0.1)
-        exit_step = st.slider("Exit Threshold Step", 0.1, 0.5, 0.5, 0.1)
-        exit_thresholds = [round(t, 1) for t in np.arange(exit_min, exit_max + 0.1, exit_step)]
-        
-        p_thresholds = [0.01, 0.05, 0.1]
-        
-        parameter_ranges = {
-            'window_size': window_sizes,
-            'entry_threshold': entry_thresholds,
-            'exit_threshold': exit_thresholds,
-            'p_value_threshold': p_thresholds
-        }
-        
-        # Calculate total number of combinations
-        total_combinations = (
-            len(window_sizes) * 
-            len(entry_thresholds) * 
-            len(exit_thresholds) * 
-            len(p_thresholds)
-        )
-        
-        st.metric("Total Parameter Combinations", total_combinations)
-        
-        if total_combinations > 200:
-            st.warning(f"Testing {total_combinations} parameter combinations may take a while. Consider reducing the ranges.")
-        
-        if st.button("Run P-Hacking Analysis"):
-            if total_combinations > 0:
-                with st.spinner(f"Testing {total_combinations} parameter combinations..."):
-                    results_df = strategy.evaluate_p_hacking_risk(parameter_ranges)
-                    st.success(f"Analysis complete! Tested {len(results_df)} parameter combinations.")
-            else:
-                st.error("No parameter combinations to test. Please adjust the parameter ranges.")
-    
-    with col2:
-        st.subheader("P-Hacking Analysis Results")
-        
-        # Check if p-hacking analysis has been run
-        if 'results_df' in locals() and isinstance(results_df, pd.DataFrame) and not results_df.empty:
-            fig = strategy.plot_p_hacking_results(results_df)
-            st.pyplot(fig)
+    if strategy is not None:
+        with col2:
+            st.subheader("P-Hacking Analysis Results")
+            
+            # Check if p-hacking analysis has been run
+            if 'results_df' in locals() and isinstance(results_df, pd.DataFrame) and not results_df.empty:
+                fig = strategy.plot_p_hacking_results(results_df)
+                st.pyplot(fig)
             
             st.markdown("### Top 5 Strategies by Sharpe Ratio")
             top_strategies = results_df.sort_values('sharpe_ratio', ascending=False).head(5)
