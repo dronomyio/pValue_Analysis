@@ -580,40 +580,40 @@ with tabs[5]:
             if 'results_df' in locals() and isinstance(results_df, pd.DataFrame) and not results_df.empty:
                 fig = strategy.plot_p_hacking_results(results_df)
                 st.pyplot(fig)
-            
-            st.markdown("### Top 5 Strategies by Sharpe Ratio")
-            top_strategies = results_df.sort_values('sharpe_ratio', ascending=False).head(5)
-            st.dataframe(top_strategies)
-            
-            # Calculate statistics about the analysis
-            successful_strategies = results_df[results_df['sharpe_ratio'] > 1]
-            success_rate = len(successful_strategies) / len(results_df)
-            
-            st.markdown(f"""
-            ### P-Hacking Statistics
-            
-            - **Total Parameter Combinations Tested:** {len(results_df)}
-            - **Number of "Successful" Strategies (Sharpe > 1):** {len(successful_strategies)}
-            - **Success Rate:** {success_rate:.2%}
-            - **Maximum Sharpe Ratio Found:** {results_df['sharpe_ratio'].max():.2f}
-            - **Expected Maximum Sharpe by Chance:** Due to multiple testing across {len(results_df)} combinations, finding a high Sharpe ratio by chance is likely.
-            - **Expected Minimum P-Value:** With {len(results_df)} trials, the expected minimum p-value would be approximately {1/(len(results_df)+1):.4f}
-            """)
-            
-            st.markdown("""
-            ### Interpretation
-            
-            This analysis demonstrates how testing multiple parameter combinations can lead to "p-hacking" in trading strategy development.
-            Even if the true edge of a strategy is minimal or non-existent, testing enough parameter combinations will likely yield seemingly successful strategies by chance.
-            
-            Key insights:
-            - The distribution of Sharpe ratios across parameter combinations shows the range of outcomes possible through parameter optimization
-            - Many parameter combinations yield "successful" strategies (Sharpe > 1) purely by chance
-            - This is directly analogous to the p-value meta-distribution issue in scientific research
-            - Out-of-sample testing is crucial to validate whether a strategy has a true edge
-            """)
-        else:
-            st.info("No p-hacking analysis results yet. Click 'Run P-Hacking Analysis' to see the results.")
+                
+                st.markdown("### Top 5 Strategies by Sharpe Ratio")
+                top_strategies = results_df.sort_values('sharpe_ratio', ascending=False).head(5)
+                st.dataframe(top_strategies)
+                
+                # Calculate statistics about the analysis
+                successful_strategies = results_df[results_df['sharpe_ratio'] > 1]
+                success_rate = len(successful_strategies) / len(results_df)
+                
+                st.markdown(f"""
+                ### P-Hacking Statistics
+                
+                - **Total Parameter Combinations Tested:** {len(results_df)}
+                - **Number of "Successful" Strategies (Sharpe > 1):** {len(successful_strategies)}
+                - **Success Rate:** {success_rate:.2%}
+                - **Maximum Sharpe Ratio Found:** {results_df['sharpe_ratio'].max():.2f}
+                - **Expected Maximum Sharpe by Chance:** Due to multiple testing across {len(results_df)} combinations, finding a high Sharpe ratio by chance is likely.
+                - **Expected Minimum P-Value:** With {len(results_df)} trials, the expected minimum p-value would be approximately {1/(len(results_df)+1):.4f}
+                """)
+                
+                st.markdown("""
+                ### Interpretation
+                
+                This analysis demonstrates how testing multiple parameter combinations can lead to "p-hacking" in trading strategy development.
+                Even if the true edge of a strategy is minimal or non-existent, testing enough parameter combinations will likely yield seemingly successful strategies by chance.
+                
+                Key insights:
+                - The distribution of Sharpe ratios across parameter combinations shows the range of outcomes possible through parameter optimization
+                - Many parameter combinations yield "successful" strategies (Sharpe > 1) purely by chance
+                - This is directly analogous to the p-value meta-distribution issue in scientific research
+                - Out-of-sample testing is crucial to validate whether a strategy has a true edge
+                """)
+            else:
+                st.info("No p-hacking analysis results yet. Click 'Run P-Hacking Analysis' to see the results.")
 
 # Footer with references
 st.markdown("---")
