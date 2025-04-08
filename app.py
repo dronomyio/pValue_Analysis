@@ -189,9 +189,9 @@ with tabs[1]:
         first_sig = df[df["Significant at α={}?".format(significance)]]["Trials"].min() if any(df["Significant at α={}?".format(significance)]) else None
         
         if first_sig:
-            st.markdown(f"**Finding**: With just **{first_sig} trials**, the expected minimum p-value becomes significant at α={significance}.")
+            st.markdown("**Finding**: With just **{} trials**, the expected minimum p-value becomes significant at α={}".format(first_sig, significance))
         else:
-            st.markdown(f"**Finding**: Even with {max_trials} trials, the expected minimum p-value does not become significant at α={significance}.")
+            st.markdown("**Finding**: Even with {} trials, the expected minimum p-value does not become significant at α={}".format(max_trials, significance))
         
         st.dataframe(df.style.format({"Expected Min P-Value": "{:.4f}"}))
     
@@ -360,11 +360,14 @@ with tabs[2]:
     else:
         # Load and display data
         try:
+            st.write("Debug: Loading data from {}".format(data_path))
             df = pd.read_csv(data_path)
+            st.write("Debug: Data loaded successfully with shape {}".format(df.shape))
             
             # Add row numbers as an index approximating time
             df_with_index = df.copy()
             df_with_index['Day'] = range(len(df_with_index))
+            st.write("Debug: Added day index")
             
             # Create tabs for different visualizations
             data_tabs = st.tabs(["Data Preview", "Price Series", "Normalized Prices", "Spread Analysis"])
@@ -387,8 +390,10 @@ with tabs[2]:
             with data_tabs[1]:
                 # Plot the data with better formatting
                 st.subheader("Price Series")
+                st.write("Debug: Entering Price Series tab")
                 
                 fig, ax = plt.subplots(figsize=(10, 6))
+                st.write("Debug: Created figure")
                 
                 # Plot with better formatting
                 ax.plot(df_with_index['Day'], df_with_index.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
@@ -423,9 +428,12 @@ with tabs[2]:
             with data_tabs[2]:
                 # Plot normalized prices
                 st.subheader("Normalized Price Series")
+                st.write("Debug: Entering Normalized Price Series tab")
                 
                 # Normalize to the first day
+                st.write("Debug: About to normalize data")
                 normalized = df / df.iloc[0] * 100
+                st.write("Debug: Normalized data shape: {}".format(normalized.shape))
                 
                 fig, ax = plt.subplots(figsize=(10, 6))
                 ax.plot(df_with_index['Day'], normalized.iloc[:, 0], label=str(df.columns[0]), color='blue', linewidth=2)
